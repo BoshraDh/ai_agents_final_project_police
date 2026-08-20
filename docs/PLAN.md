@@ -194,14 +194,35 @@ re-verification pass)" section for the full detail. Headline results:
   formula (ch.5.3) hashes the nonce *inside* the canonical JSON record, not concatenated
   outside it. Both repos corrected and re-tested.
 - **Added `runtime/state_machine.py`** — `GamePhaseMachine`, reproduced from the book's own
-  ch.8.3 example code. Not yet wired into `PeerRuntime` (see `docs/TODO.md`'s open flags for
-  why the wire-level redesign that requires is still deferred, and what specifically remains
-  unresolved even after this read — the turn-alternation-vs-simultaneous-round question).
+  ch.8.3 example code — now actually wired into `PeerRuntime` (see the "Real turn-taking
+  protocol" section below; the turn-alternation-vs-simultaneous-round question that blocked
+  this got resolved too).
 - Confirmed the Gatekeeper parameter table (book Table 19) matches this repo's
   `rate_limiter_gatekeeper` exactly — no changes needed there.
 - Confirmed Step-0 (ch.5.5) mentions signing with "a key supplied in advance" — a real
   signing key may be intended, not necessarily the SHA-256 commit-reveal sealing this repo
   currently uses. No such key has been supplied yet; flagged as a sharper open question.
+
+## Real turn-taking protocol — 2026-08-20 (closes the stage-2/3/6 deferred item)
+Re-reading the book's ch.4.3 pheromone-decay section settled the open turn-alternation
+question: decay runs "after both the cop and the thief have completed their move" — a "turn"
+is a joint round, not chess-style alternation. That, plus ch.5.3's exact 4-step protocol and
+ch.8.3's state machine, was enough to replace the STAY-echo stub with the real thing:
+- `peer/turn_handler.py` — `TurnHandler`: per-round bookkeeping, raises on a reveal with no
+  prior commit (the Ack step's actual enforced purpose).
+- `mcp/server.py` rewritten as `build_server(name, turn_handler)`, exposing
+  `submit_commit`/`submit_reveal` — replaces `receive_move` entirely.
+- `mcp/client.py`'s `McpTransport` gains `send_commit`/`send_reveal`.
+- `runtime/peer_runtime.py`'s `run_turn_loop` rewritten around the real per-round cycle,
+  driven by `GamePhaseMachine`; a network failure at either send step lands the machine in
+  `TECHNICAL_LOSS`.
+- **Manually verified with a real two-process run — the first genuinely bidirectional
+  exchange this session**: both peers committed, revealed their own real strategy-chosen
+  moves and hints, and received the *opponent's* real reveal back (not a stub). See
+  `docs/PRD_turn_protocol.md` for the full transcript and remaining design decisions
+  (`intent` always `"truth"` for now, `state` snapshot shape, barrier/deception/negotiation
+  still deferred).
+- 117 tests, 93% coverage, ruff-clean.
 
 ## Open items / flags (tracked, not silently decided)
 - `agreed_between` in `config/game.json` currently lists `"<opponent-team-code>"` as a

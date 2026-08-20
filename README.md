@@ -11,17 +11,18 @@ conflicts with the book, the book wins.
 **Team code:** `bb-ai-12`
 
 ## Status
-✅ **All 7 build stages complete** (base logic + MCP infra + blind strategy + language/scent
-+ cloud tunneling + security + reporting shell). See `docs/PLAN.md` for what was built at
-each stage and `docs/TODO.md` for the deferred integration work still open (synchronized
-turn-taking, barrier placement, the live Gmail/ngrok setup) before a real submission-counted
-match.
+✅ **All 7 build stages complete, plus the real turn-taking protocol** (base logic + MCP
+infra + blind strategy + language/scent + cloud tunneling + security + reporting shell +
+real Commit→Acknowledge→Reveal turn protocol, replacing the old STAY-echo stub). See
+`docs/PLAN.md` for what was built at each stage and `docs/TODO.md` for the deferred
+integration work still open (barrier placement, deceptive hints, the live Gmail/ngrok setup)
+before a real submission-counted match.
 
 ## Quick start (localhost — development and smoke testing)
 
 ```bash
 uv sync
-uv run pytest -q --cov=src --cov-report=term-missing   # 100 tests, 93% coverage
+uv run pytest -q --cov=src --cov-report=term-missing   # 117 tests, 93% coverage
 uv run ruff check .                                      # zero violations
 uv run bb-ai-12-police check-config                       # sanity-check config loading
 uv run bb-ai-12-police declare                            # print a sealed Step-0 declaration
@@ -29,10 +30,10 @@ uv run bb-ai-12-police replay --log logs/bb-ai-12/log_*.json   # step through a 
 ```
 
 Two-terminal round-trip smoke test (run the thief repo's equivalent command first in its own
-terminal, then this one). This peer's outbound moves are now real Manhattan-distance pursuit
-decisions with a real trash-talk hint attached each turn; the inbound reply is still a
-stage-2 STAY stub with a placeholder hint until the synchronized turn-taking protocol lands
-(see `docs/PRD_strategy.md`):
+terminal, then this one). Both peers now play real, genuinely bidirectional rounds: each side
+commits (SHA-256 hash), then reveals its own real strategy-chosen move + trash-talk hint, and
+receives the *opponent's* real reveal back in the same round trip (see
+`docs/PRD_turn_protocol.md`):
 
 ```bash
 uv run bb-ai-12-police peer --turns 3
@@ -66,7 +67,8 @@ artifacts) + `infra`/`shared` (MCP transport, config, rate limiting).
 - `docs/TODO.md` — live task list, updated every change.
 - `docs/PRD_base_logic.md` / `docs/PRD_mcp_infra.md` / `docs/PRD_strategy.md` /
   `docs/PRD_language_scent.md` / `docs/PRD_cloud_tunnel.md` / `docs/PRD_security_crypto.md` /
-  `docs/PRD_reporting_shell.md` — per-stage detail (all 7 stages).
+  `docs/PRD_reporting_shell.md` / `docs/PRD_turn_protocol.md` — per-stage detail (all 7
+  stages plus the real turn-taking protocol).
 
 ## Academic report
 The full 6-section academic report (rules model, communication approach, decision-making,

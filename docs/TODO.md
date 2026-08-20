@@ -137,18 +137,22 @@ re-read the relevant chapters directly instead of leaving these as open guesses:
       is (still the most defensible reading available), but this is now a *sharper* open
       question than before — see the open flag below.
 
+## Done (real turn-taking protocol — 2026-08-20)
+- [x] **Resolved the turn-alternation-vs-simultaneous-round question**: book ch.4.3 confirms
+      pheromone decay runs "after both the cop and the thief have completed their move" for
+      a turn — a joint round, not chess-style alternation.
+- [x] `peer/turn_handler.py` — `TurnHandler`, real per-round protocol bookkeeping.
+- [x] `mcp/server.py` rewritten (`build_server`, `submit_commit`/`submit_reveal`) — replaces
+      `receive_move` entirely; `mcp/client.py` gains `send_commit`/`send_reveal`.
+- [x] `runtime/peer_runtime.py`'s `run_turn_loop` rewritten around the real per-round cycle,
+      driven by `GamePhaseMachine` (network failures → `TECHNICAL_LOSS`).
+- [x] **Manually verified with a real two-process run — genuinely bidirectional**: both peers
+      committed, revealed real strategy-chosen moves/hints, and received the *opponent's* real
+      reveal back. See `docs/PRD_turn_protocol.md` for the full transcript.
+- [x] 117 tests, 93% coverage, ruff-clean.
+- [x] Updated this file, PLAN.md, PRD.md, PRD_turn_protocol.md, README.md.
+
 ## Open flags (not blocking, must resolve before a real submission-counted match)
-- [ ] **Wire `GamePhaseMachine` into `PeerRuntime`** — the class exists and is tested, but
-      `run_turn_loop` doesn't use it yet. Doing so properly also means redesigning the wire
-      protocol around the book's confirmed 4-step Commit(hash-only)→Acknowledge(locked)→
-      Reveal(move+hint, nonce still hidden)→Final-Reveal(all nonces, end of game only)
-      sequence — a materially different shape from the current single `receive_move(direction,
-      turn, hint)` stub. One thing the book text read this session did *not* settle: whether a
-      "turn" is strict alternation (one agent moves, then explicitly hands off to the other —
-      suggested by the Live GUI's green/gray "YOUR TURN"/"LOCKED" banner description) or a
-      simultaneous joint round (suggested by the Dec-POMDP tuple's joint `P(s'|s,a1,a2)`).
-      Re-check chapters 2-3 and the reference repo's actual `PeerRuntime` loop before building
-      this — don't guess at the exchange order.
 - [ ] **Step-0 "signing" key** — book ch.5.5 mentions signing with "a key supplied in
       advance"; no such key has been issued/found yet. Revisit if/when one is supplied (e.g.
       in a course announcement or the reference repo's own Step-0 code), and treat the current
@@ -157,9 +161,18 @@ re-read the relevant chapters directly instead of leaving these as open guesses:
       code once a match is negotiated (both repos, kept byte-identical).
 - [ ] Replace `[game].members` placeholder student IDs in `config/game.toml`.
 - [ ] **Barrier placement** — `PoliceBrain` only ever chooses a movement direction; it doesn't
-      yet decide when/where to place a barrier, and the wire protocol doesn't carry barrier
-      messages. Add once the message schema is extended (likely alongside the turn-taking item
-      above).
+      yet decide when/where to place a barrier, and the commit-reveal wire protocol's `state`/
+      `move` fields don't carry barrier messages yet. Add once the schema is extended.
+- [ ] **Deceptive hints** — the real turn protocol's `intent` field ("truth"/"lie") is now
+      wired end-to-end over the wire, but nothing ever sets it to `"lie"` yet — `TemplateProvider`
+      lines aren't factual claims. FR-8's thief-deception allowance needs real position-claim
+      logic behind this field. See `docs/PRD_turn_protocol.md`.
+- [ ] **Real negotiation handshake beyond config-agreement** — `domain.negotiation.
+      configs_match` only checks `config/game.json` byte-identity; game_id assignment and any
+      other pre-game agreement steps aren't built.
+- [ ] **Mutual end-of-game audit exchange** — each peer's `CommitRevealLog` already
+      self-audits; peers don't yet exchange final logs with each other for a true *mutual*
+      audit (book ch.5.4).
 - [ ] **Pheromone spatial spread** — re-confirm the book's exact spatial falloff shape for
       `pheromone_grid_size` (uniform vs. weighted neighborhood deposit) before implementing
       anything beyond the current single-cell deposit in `domain/pheromones.py`.
@@ -170,7 +183,7 @@ re-read the relevant chapters directly instead of leaving these as open guesses:
       still just runs exactly `--turns N`; it doesn't call `domain.rules.outcome_after_step`
       to detect capture/survival and stop with a real `GameOutcome`. Needed before a
       `send-report` CLI command can be built meaningfully (see `docs/PRD_reporting_shell.md`).
-- [ ] **`cli.py` is at 145/150 lines** — the next subcommand needs the CLI split into a
+- [ ] **`cli.py` is at 148/150 lines** — the next subcommand needs the CLI split into a
       package (one module per subcommand) rather than one more function crammed in.
 - [ ] **Known test flakiness (environmental, not a code bug)**: `tests/gui/` occasionally hits
       `_tkinter.TclError: Can't find a usable init.tcl` under this Windows machine's file-I/O

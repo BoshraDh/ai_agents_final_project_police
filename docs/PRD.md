@@ -50,12 +50,16 @@ server, no shared memory, and no referee.
 - Any shared runtime process between the two repos — they only ever talk over the network.
 
 ## Status
-All 7 book-mandated build stages complete: FR-1 through FR-9 implemented and tested (FR-3's
-crypto audit and FR-9 itself cover local sealing/auditing, not yet the wire-level exchange
-between peers — see `docs/PRD_security_crypto.md`), FR-10 (the four JSON artifacts build and
-write correctly; Gmail sending is built and unit-tested but no real email has been sent —
-see `docs/PRD_reporting_shell.md`), FR-11 (loading + a pre-game config-agreement check, no
-full handshake yet). See `docs/PRD_base_logic.md` / `docs/PRD_mcp_infra.md` /
-`docs/PRD_strategy.md` / `docs/PRD_language_scent.md` / `docs/PRD_cloud_tunnel.md` /
-`docs/PRD_security_crypto.md` / `docs/PRD_reporting_shell.md` for stage-specific detail and
+All 7 book-mandated build stages complete, plus the real turn-taking protocol (2026-08-20)
+that closes the stage-2/3/6 STAY-echo-stub deferral: FR-1 through FR-9 implemented and tested
+and now exercised genuinely bidirectionally — both peers' inbound and outbound moves are real
+strategy decisions exchanged via the book's confirmed Commit→Acknowledge→Reveal protocol (see
+`docs/PRD_turn_protocol.md`). FR-9's audit is still local self-audit per peer, not yet a
+mutual end-of-game log exchange; FR-10 (the four JSON artifacts build and write correctly;
+Gmail sending is built, unit-tested, **and verified with a real send** to
+`rmisegal+uoh26finalgame@gmail.com` — see `docs/PRD_reporting_shell.md`); FR-11 (loading + a
+pre-game config-agreement check, no full negotiation handshake yet). See
+`docs/PRD_base_logic.md` / `docs/PRD_mcp_infra.md` / `docs/PRD_strategy.md` /
+`docs/PRD_language_scent.md` / `docs/PRD_cloud_tunnel.md` / `docs/PRD_security_crypto.md` /
+`docs/PRD_reporting_shell.md` / `docs/PRD_turn_protocol.md` for stage-specific detail and
 `docs/TODO.md` for what's next (deferred integration work, not a new stage).
