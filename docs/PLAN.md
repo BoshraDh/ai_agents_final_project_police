@@ -66,17 +66,6 @@ skipping layers.
 
 Still no strategy (hardcoded STAY), no crypto, no LLM — per the book's layering order.
 
-## Build stages (book's own priority order — each runs end-to-end before the next starts)
-1. Base logic — grid, movement, barriers, capture, scoring. No networking. *(done)*
-2. MCP infra — FastMCP server/client on localhost, no strategy yet. *(done)*
-3. Blind strategy — heuristic move-decision (Manhattan distance), still no language/scent.
-   *(done)*
-4. **Language + scent** — pheromone math, free-text hints, LLM plugged in for banter text
-   only. *(current)*
-5. Cloud exposure + tunneling — ngrok/Localtonet, environment separation.
-6. Security — Commit-Reveal, Nonce, Step-0 hardware declaration, pre-game SHA-256 handshake.
-7. Reporting shell — Gmail OAuth2 + Gatekeeper, Live GUI, Replay Viewer.
-
 ## Stage 3 — what was built
 - `domain/belief.py` — `BeliefState`: exact position tracker, replayed from public start
   positions + honestly-relayed moves (deterministic until stage 4's deception/stage 6's
@@ -96,6 +85,37 @@ Still no strategy (hardcoded STAY), no crypto, no LLM — per the book's layerin
   not built ad hoc, to a later stage rather than guessed at here).
 
 Still no barrier-placement decisions, no scent/hints, no crypto, no LLM — per the book's
+layering order.
+
+## Build stages (book's own priority order — each runs end-to-end before the next starts)
+1. Base logic — grid, movement, barriers, capture, scoring. No networking. *(done)*
+2. MCP infra — FastMCP server/client on localhost, no strategy yet. *(done)*
+3. Blind strategy — heuristic move-decision (Manhattan distance), still no language/scent.
+   *(done)*
+4. Language + scent — pheromone math, free-text hints, LLM plugged in for banter text only.
+   *(done)*
+5. **Cloud exposure + tunneling** — ngrok/Localtonet, environment separation. *(current)*
+6. Security — Commit-Reveal, Nonce, Step-0 hardware declaration, pre-game SHA-256 handshake.
+7. Reporting shell — Gmail OAuth2 + Gatekeeper, Live GUI, Replay Viewer.
+
+## Stage 4 — what was built
+- `domain/pheromones.py` — `PheromoneField`: τij(t+1)=max(0,(1-ρ)τij(t)+Δτij), single-cell
+  deposit+decay (spatial spread across `pheromone_grid_size` not yet implemented — needs
+  book re-confirmation of the falloff shape first).
+- `llm/provider_base.py` — `TrashTalkProvider`: abstract `_generate(turn)`, concrete
+  `hint(turn)` enforces `hint_max_words`.
+- `llm/template_provider.py` — `TemplateProvider`: 0-token canned sentence bank, the required
+  zero-LLM default (NFR-8).
+- `llm/resolve_provider.py` — factory reading `[trash_talk].provider`; only `template` is
+  implemented, others raise `NotImplementedError`.
+- `mcp/server.py` / `mcp/client.py` — `receive_move`/`send_move` gain a `hint` field.
+- `runtime/peer_runtime.py` — `run_turn_loop` sends a real hint each turn and steps
+  `opponent_scent` (a `PheromoneField`) from the tracked opponent position.
+- **Manually verified with real hints on both sides** — see `docs/PRD_language_scent.md` for
+  the exact transcript and the design decisions on why `opponent_scent` is currently
+  redundant with `BeliefState`, and why deceptive hints wait on stage 6's crypto audit.
+
+Still no barrier-placement decisions, no crypto, no real LLM providers — per the book's
 layering order.
 
 ## Open items / flags (tracked, not silently decided)

@@ -19,13 +19,13 @@ class McpTransport:
     def __init__(self, opponent_url: str) -> None:
         self.opponent_url = opponent_url
 
-    async def send_move_async(self, direction: str, turn: int) -> dict[str, Any]:
+    async def send_move_async(self, direction: str, turn: int, hint: str = "") -> dict[str, Any]:
         async with Client(self.opponent_url) as client:
             result = await client.call_tool(
-                "receive_move", {"direction": direction, "turn": turn}
+                "receive_move", {"direction": direction, "turn": turn, "hint": hint}
             )
         return result.data
 
-    def send_move(self, direction: str, turn: int) -> dict[str, Any]:
+    def send_move(self, direction: str, turn: int, hint: str = "") -> dict[str, Any]:
         """Synchronous convenience wrapper around `send_move_async`."""
-        return asyncio.run(self.send_move_async(direction, turn))
+        return asyncio.run(self.send_move_async(direction, turn, hint))

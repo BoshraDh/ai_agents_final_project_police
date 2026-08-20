@@ -50,9 +50,11 @@ server, no shared memory, and no referee.
 - Any shared runtime process between the two repos — they only ever talk over the network.
 
 ## Status
-Stage 1 (base logic), Stage 2 (MCP infra) and Stage 3 (blind strategy) complete: FR-1, FR-2,
-FR-3 (geometric check only, no audit yet), FR-4, FR-5, FR-6 (real server+client round trip;
-outbound strategy is real, inbound stub still STAY — see `docs/PRD_strategy.md`), FR-7 (pure
-Manhattan-distance heuristic, zero LLM tokens), FR-11 (loading only, no handshake yet)
-implemented and tested. See `docs/PRD_base_logic.md` / `docs/PRD_mcp_infra.md` /
-`docs/PRD_strategy.md` for stage-specific detail and `docs/TODO.md` for what's next.
+Stage 1 (base logic), Stage 2 (MCP infra), Stage 3 (blind strategy) and Stage 4 (language +
+scent) complete: FR-1, FR-2, FR-3 (geometric check only, no audit yet), FR-4, FR-5, FR-6 (real
+server+client round trip; outbound strategy/hints are real, inbound stub still STAY — see
+`docs/PRD_strategy.md`), FR-7 (pure Manhattan-distance heuristic, zero LLM tokens), FR-8
+(hints capped at `hint_max_words`, not yet deceptive/position-linked — see
+`docs/PRD_language_scent.md`), FR-11 (loading only, no handshake yet) implemented and tested.
+See `docs/PRD_base_logic.md` / `docs/PRD_mcp_infra.md` / `docs/PRD_strategy.md` /
+`docs/PRD_language_scent.md` for stage-specific detail and `docs/TODO.md` for what's next.

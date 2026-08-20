@@ -34,17 +34,30 @@
 - [x] 46 tests, 94% coverage, ruff-clean.
 - [x] Updated this file, PLAN.md, PRD.md, PRD_strategy.md, README.md.
 
-## Next (Stage 4 — Language + scent)
-- [ ] `domain/pheromones.py` (smell) — scent field: τij(t+1)=max(0,(1-ρ)τij(t)+Δτij), using
-      `config/game.json`'s `pheromones` block.
-- [ ] `llm/provider_base.py` + `llm/template_provider.py` (default, 0 tokens) — trash-talk text
+## Done (Stage 4 — Language + scent)
+- [x] `domain/pheromones.py` — `PheromoneField`, single-cell τij(t+1)=max(0,(1-ρ)τij(t)+Δτij).
+- [x] `llm/provider_base.py` + `llm/template_provider.py` (default, 0 tokens) — trash-talk text
       generation only; the move is still never chosen by the LLM.
-- [ ] Extend the wire message shape (currently just `direction`+`turn`) to carry a free-text
-      hint capped at `hint_max_words`, honestly relayed for now (deception mechanics land once
-      the audit/crypto layer in stage 6 exists to make a caught lie costly).
-- [ ] Update `BeliefState`'s deterministic tracking to fold in scent-field signal alongside the
-      exact move-replay it already does.
-- [ ] Update this file, PLAN.md, PRD.md again once stage 4 is committed.
+- [x] `llm/resolve_provider.py` — factory reading `[trash_talk]` from `config/game.toml`.
+- [x] Extended the wire message shape (`direction`+`turn`) to also carry a `hint` field capped
+      at `hint_max_words`, honestly relayed for now.
+- [x] `runtime/peer_runtime.py` steps an `opponent_scent` `PheromoneField` from the tracked
+      opponent position each turn (see `docs/PRD_language_scent.md` for why this is currently
+      redundant with `BeliefState`, and what makes it load-bearing later).
+- [x] Manual test: ran this repo + the thief repo concurrently — real, distinct hint text
+      confirmed flowing on outbound turns on both sides (see `docs/PRD_language_scent.md`).
+- [x] 57 tests, 95% coverage, ruff-clean.
+- [x] Updated this file, PLAN.md, PRD.md, PRD_language_scent.md, README.md.
+
+## Next (Stage 5 — Cloud exposure + tunneling)
+- [ ] Pick and document a tunneling tool (ngrok or Localtonet) for exposing `my_port`
+      publicly so a real opponent team (not just localhost) can reach this peer.
+- [ ] `mcp/tunnel.py` — thin wrapper that starts/stops the tunnel and reports the public URL.
+- [ ] Document the environment separation between "localhost smoke test" (current `peer`
+      subcommand) and "real match over a public tunnel" in README.md.
+- [ ] Update `config/game.toml`'s `opponent_url` handling to accept a tunnel URL, not just
+      `127.0.0.1`.
+- [ ] Update this file, PLAN.md, PRD.md again once stage 5 is committed.
 
 ## Open flags (not blocking, must resolve before a real submission-counted match)
 - [ ] **`num_games`** — confirm against the book text whether the mandated per-series value
@@ -63,9 +76,11 @@
 - [ ] **Barrier placement** — `PoliceBrain` only ever chooses a movement direction; it doesn't
       yet decide when/where to place a barrier, and the wire protocol doesn't carry barrier
       messages. Add once the message schema is extended (likely alongside the stage above).
+- [ ] **Pheromone spatial spread** — re-confirm the book's exact spatial falloff shape for
+      `pheromone_grid_size` (uniform vs. weighted neighborhood deposit) before implementing
+      anything beyond the current single-cell deposit in `domain/pheromones.py`.
 
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
-- [ ] Stage 4 — Language + scent (pheromone math, free-text hints, template LLM banter).
 - [ ] Stage 5 — Cloud exposure + tunneling (ngrok/Localtonet).
 - [ ] Stage 6 — Security (commit-reveal, nonce, Step-0 declaration, SHA-256 handshake).
 - [ ] Stage 7 — Reporting shell (Gmail OAuth2, Gatekeeper, Live GUI, Replay Viewer).

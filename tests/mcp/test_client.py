@@ -14,10 +14,12 @@ from bb_ai_12_police.mcp.server import mcp
 def test_send_move_round_trips_in_process():
     transport = McpTransport(mcp)
     reply = transport.send_move("N", 1)
-    assert reply == {"direction": "STAY", "turn": 1}
+    assert reply["direction"] == "STAY"
+    assert reply["turn"] == 1
 
 
-def test_send_move_exercises_the_async_path_via_asyncio_run():
+def test_send_move_forwards_the_hint():
     transport = McpTransport(mcp)
-    reply = transport.send_move("E", 3)
-    assert reply == {"direction": "STAY", "turn": 3}
+    reply = transport.send_move("E", 3, hint="over here")
+    assert reply["turn"] == 3
+    assert "hint" in reply
