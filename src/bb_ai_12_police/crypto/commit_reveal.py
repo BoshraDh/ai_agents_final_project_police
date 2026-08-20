@@ -1,14 +1,15 @@
-"""SHA-256 commit-reveal sealing (book's Commit->Acknowledge->Reveal->Audit).
-
-`compute_commitment` hashes a canonical (sorted-key, no-whitespace) JSON
-serialization of the payload plus a fresh nonce, so the commitment reveals
-nothing about the payload until the nonce is disclosed (zero-knowledge
-framing) — matching the book's confirmed mechanism. `CommitRevealLog`
-accumulates one sealed entry per turn and can audit the whole sequence
-after the fact, which is what "a mutual post-game audit re-verifies every
-step" (FR-9) actually checks. The wire-level Commit/Acknowledge/Reveal
-message exchange between peers is not implemented here — see
-`docs/PRD_security_crypto.md` for why that stays a documented open item.
+"""SHA-256 commit-reveal sealing (book's Commit->Acknowledge->Reveal->Audit,
+ch.5.3 — confirmed against the book text: `Hcommit = SHA256(canonical_json(
+{...payload, "nonce": nonce}))`, i.e. the nonce is one more field inside the
+single canonically-serialized record, not appended outside it. The book's
+own reference formula covers `{state, move, intent, nonce}` plus the hint,
+step number, and role; this module stays generic over `payload`'s shape —
+callers decide which fields to include. `CommitRevealLog` accumulates one
+sealed entry per turn and can audit the whole sequence after the fact,
+which is what "a mutual post-game audit re-verifies every step" (FR-9)
+actually checks. The wire-level Commit/Acknowledge/Reveal message exchange
+between peers is not implemented here — see `docs/PRD_security_crypto.md`
+for why that stays a documented open item.
 """
 
 from __future__ import annotations
@@ -29,7 +30,9 @@ def generate_nonce() -> str:
 
 
 def compute_commitment(payload: dict[str, Any], nonce: str) -> str:
-    material = canonical_json(payload) + nonce
+    """Hcommit = SHA256(canonical_json({**payload, "nonce": nonce})) — book ch.5.3."""
+    record = {**payload, "nonce": nonce}
+    material = canonical_json(record)
     return hashlib.sha256(material.encode("utf-8")).hexdigest()
 
 

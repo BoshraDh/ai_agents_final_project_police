@@ -99,36 +99,84 @@
 All 7 book-mandated build stages are now complete. Remaining work is the deferred
 integration items below, plus playing real games once ready.
 
+## Done (book re-verification pass — 2026-08-20)
+The book PDF (and its pre-extracted text) turned out to be locally readable on this machine —
+re-read the relevant chapters directly instead of leaving these as open guesses:
+- [x] **`num_games` resolved: 6, and it is FIXED (not negotiable)** — book Table 18
+      ("פרמטרי הרשת והליגה" / Network & League Parameters), row 1: "מספר המשחקונים בסדרה מול
+      יריבה" (sub-games per series against one opponent) = `6`, status `קבוע` (constant).
+      Deviating from a "constant"-status value disqualifies the team per the book's own status
+      definitions. Fixed `config/game.json` in both repos from `1` to `6`; re-verified
+      byte-identical via `sha256sum`. This was a real, disqualification-risk bug, not just an
+      open question.
+- [x] **Fixed a real cryptographic bug in `crypto/commit_reveal.py`**: the book's exact
+      formula (ch.5.3, with a full Python `commit()`/`verify()` code sample) is
+      `Hcommit = SHA256(canonical_json({...payload, "nonce": nonce}))` — the nonce is one more
+      field *inside* the single canonically-serialized JSON record. `compute_commitment` was
+      instead concatenating `canonical_json(payload) + nonce` as two separate strings, which
+      produces a different (still internally-consistent, but not book-compliant) hash. Fixed
+      to match the book exactly; added a test (`test_compute_commitment_matches_the_books_
+      exact_formula`) that pins the byte-for-byte formula.
+- [x] **Added `runtime/state_machine.py` — `GamePhaseMachine`**, reproduced from the book's
+      own example code (ch.8.3, "Orchestrator and State Machine"), confirmed verbatim against
+      the book text: `WAITING_FOR_OPPONENT → COMPUTING_MOVE → COMMITTING → AWAITING_REVEAL →
+      VERIFYING → WAITING_FOR_OPPONENT`, with `TECHNICAL_LOSS` reachable from `COMPUTING_MOVE`
+      or `AWAITING_REVEAL` as a terminal state. Not yet wired into `PeerRuntime` — see the open
+      flag below.
+- [x] 107 tests, 92% coverage, ruff-clean in both repos.
+- [x] Confirmed (book Table 19, "Gatekeeper" parameters) that every other value already in
+      `rate_limiter_gatekeeper` matches the book exactly: `requests_per_minute≥30`,
+      `concurrent_requests≥2`, `retry_backoff_sec≥5`, `max_retries≥3`, `queue_depth≥100`,
+      `response_timeout_sec=30` (negotiated), `watchdog_timeout_sec=60` (negotiated) — no
+      changes needed there.
+- [x] Confirmed the book's Step-0 section (ch.5.5) says the hardware/software declaration is
+      "cryptographically signed using a key supplied in advance" (`מפתח המסופק מראש`) — this
+      phrasing suggests a real pre-issued signing key may be intended, not necessarily the
+      commit-reveal SHA-256 sealing this repo currently uses for Step-0. No such key has been
+      supplied to this project yet, so `crypto/step0.py`'s current sealing approach is left as
+      is (still the most defensible reading available), but this is now a *sharper* open
+      question than before — see the open flag below.
+
 ## Open flags (not blocking, must resolve before a real submission-counted match)
-- [ ] **`num_games`** — confirm against the book text whether the mandated per-series value
-      is `6` (as the reference repo's README claims) or the Appendix ו example `1`; update
-      `config/game.json` in both repos together if it changes.
+- [ ] **Wire `GamePhaseMachine` into `PeerRuntime`** — the class exists and is tested, but
+      `run_turn_loop` doesn't use it yet. Doing so properly also means redesigning the wire
+      protocol around the book's confirmed 4-step Commit(hash-only)→Acknowledge(locked)→
+      Reveal(move+hint, nonce still hidden)→Final-Reveal(all nonces, end of game only)
+      sequence — a materially different shape from the current single `receive_move(direction,
+      turn, hint)` stub. One thing the book text read this session did *not* settle: whether a
+      "turn" is strict alternation (one agent moves, then explicitly hands off to the other —
+      suggested by the Live GUI's green/gray "YOUR TURN"/"LOCKED" banner description) or a
+      simultaneous joint round (suggested by the Dec-POMDP tuple's joint `P(s'|s,a1,a2)`).
+      Re-check chapters 2-3 and the reference repo's actual `PeerRuntime` loop before building
+      this — don't guess at the exchange order.
+- [ ] **Step-0 "signing" key** — book ch.5.5 mentions signing with "a key supplied in
+      advance"; no such key has been issued/found yet. Revisit if/when one is supplied (e.g.
+      in a course announcement or the reference repo's own Step-0 code), and treat the current
+      SHA-256-commit-reveal-based sealing as a placeholder until then.
 - [ ] Replace `agreed_between: ["bb-ai-12", "<opponent-team-code>"]` with the real opponent
       code once a match is negotiated (both repos, kept byte-identical).
 - [ ] Replace `[game].members` placeholder student IDs in `config/game.toml`.
-- [ ] **Synchronized turn-taking / negotiation handshake** — still open (`peer/turn_handler.py`,
-      `peer/handshake.py`); `mcp/server.py`'s inbound `receive_move` still always echoes STAY.
-      Re-check the book's exact protocol text before designing — see
-      `docs/PRD_security_crypto.md`'s design-decision note (this now also blocks the
-      wire-level Commit→Acknowledge→Reveal exchange between peers, not just move relay).
 - [ ] **Barrier placement** — `PoliceBrain` only ever chooses a movement direction; it doesn't
       yet decide when/where to place a barrier, and the wire protocol doesn't carry barrier
-      messages. Add once the message schema is extended (likely alongside the item above).
+      messages. Add once the message schema is extended (likely alongside the turn-taking item
+      above).
 - [ ] **Pheromone spatial spread** — re-confirm the book's exact spatial falloff shape for
       `pheromone_grid_size` (uniform vs. weighted neighborhood deposit) before implementing
       anything beyond the current single-cell deposit in `domain/pheromones.py`.
 - [ ] **Live ngrok tunnel** — `mcp/tunnel.py` is built and unit-tested but never run live this
       session (see `docs/PRD_cloud_tunnel.md`); the user runs `bb-ai-12-police tunnel` herself
       once ngrok is installed and she's ready for a real match.
-- [ ] **Step-0 "signing"** — currently sealed via SHA-256 commit-reveal, not an asymmetric
-      signature (none was confirmed from the book text this session). Revisit if the book
-      specifies real public-key signatures for Step-0.
 - [ ] **Game-completion detection / `send-report` command** — `PeerRuntime.run_turn_loop`
       still just runs exactly `--turns N`; it doesn't call `domain.rules.outcome_after_step`
       to detect capture/survival and stop with a real `GameOutcome`. Needed before a
       `send-report` CLI command can be built meaningfully (see `docs/PRD_reporting_shell.md`).
 - [ ] **`cli.py` is at 145/150 lines** — the next subcommand needs the CLI split into a
       package (one module per subcommand) rather than one more function crammed in.
+- [ ] **Known test flakiness (environmental, not a code bug)**: `tests/gui/` occasionally hits
+      `_tkinter.TclError: Can't find a usable init.tcl` under this Windows machine's file-I/O
+      contention when many Tk interpreters are created/destroyed back-to-back in one `pytest`
+      run. Re-running always passes cleanly; the GUI code itself is correct (verified via
+      multiple clean full-suite runs). Not worth chasing further in this session.
 
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication

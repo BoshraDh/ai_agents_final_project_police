@@ -54,6 +54,20 @@ that need a fresh re-read before implementation.
 - [x] `uv run pytest -q --cov=src` passes at 92% coverage (74 tests); `uv run ruff check .` is
       clean.
 
+## Addendum — 2026-08-20 book re-verification
+The book PDF turned out to be locally readable on this machine. Re-reading ch.5.3 directly
+(full `commit()`/`verify()` code sample) found a real bug: `compute_commitment` was hashing
+`canonical_json(payload) + nonce` as two concatenated strings, but the book's exact formula is
+`Hcommit = SHA256(canonical_json({...payload, "nonce": nonce}))` — the nonce belongs *inside*
+the single canonically-serialized record. Fixed in both repos; a new test
+(`test_compute_commitment_matches_the_books_exact_formula`) pins the corrected formula
+byte-for-byte. Also added `runtime/state_machine.py`'s `GamePhaseMachine`, reproduced from the
+book's own ch.8.3 example code (`WAITING_FOR_OPPONENT → COMPUTING_MOVE → COMMITTING →
+AWAITING_REVEAL → VERIFYING`, with `TECHNICAL_LOSS` as a terminal error state) — not yet wired
+into `PeerRuntime`, since doing so properly requires the wire-level protocol redesign already
+described below, and one open question the book text read this session didn't settle: whether
+a "turn" is strict alternation or a simultaneous joint round (see `docs/TODO.md`).
+
 ## Explicitly deferred to later stages
 - Real synchronized turn-taking / negotiation handshake (`peer/turn_handler.py`,
   `peer/handshake.py`) — still open since stage 3, now also blocking the wire-level

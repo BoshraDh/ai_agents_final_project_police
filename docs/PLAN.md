@@ -183,13 +183,27 @@ work tracked below (synchronized turn-taking, barrier placement, the live Gmail/
   yet to source a real outcome from) or run the live Gmail OAuth setup (the user's own guided
   action — walkthrough steps are written and ready in `docs/PRD_reporting_shell.md`).
 
+## Book re-verification pass — 2026-08-20
+The book PDF turned out to be locally readable on this machine; re-read the relevant chapters
+directly instead of leaving several items as open guesses. See `docs/TODO.md`'s "Done (book
+re-verification pass)" section for the full detail. Headline results:
+- **`num_games` resolved**: book Table 18 confirms `6`, status `קבוע` (FIXED/constant, not
+  negotiable — deviation disqualifies the team). `config/game.json` was shipping the wrong
+  value (`1`); fixed in both repos, byte-identity re-verified via `sha256sum`.
+- **Fixed a real bug** in `crypto/commit_reveal.py`'s `compute_commitment`: the book's exact
+  formula (ch.5.3) hashes the nonce *inside* the canonical JSON record, not concatenated
+  outside it. Both repos corrected and re-tested.
+- **Added `runtime/state_machine.py`** — `GamePhaseMachine`, reproduced from the book's own
+  ch.8.3 example code. Not yet wired into `PeerRuntime` (see `docs/TODO.md`'s open flags for
+  why the wire-level redesign that requires is still deferred, and what specifically remains
+  unresolved even after this read — the turn-alternation-vs-simultaneous-round question).
+- Confirmed the Gatekeeper parameter table (book Table 19) matches this repo's
+  `rate_limiter_gatekeeper` exactly — no changes needed there.
+- Confirmed Step-0 (ch.5.5) mentions signing with "a key supplied in advance" — a real
+  signing key may be intended, not necessarily the SHA-256 commit-reveal sealing this repo
+  currently uses. No such key has been supplied yet; flagged as a sharper open question.
+
 ## Open items / flags (tracked, not silently decided)
-- **`num_games` figure**: the reference repo's README states "the guidelines book mandates
-  6" for `network_and_league.num_games` (sub-games per series against one opponent, with
-  role-alternation). Our `config/game.json` currently ships the book Appendix ו's own
-  example value of `1`. This is a mutual, per-match setting — re-confirm the real mandated
-  value against the book text before the first real submission-counted match, and update
-  both repos' `config/game.json` together if it changes. See `docs/TODO.md`.
 - `agreed_between` in `config/game.json` currently lists `"<opponent-team-code>"` as a
   placeholder — fill in the real opponent code once a match is negotiated, in both repos.
 - `config/game.toml` `[game].members` lists placeholder student IDs — fill in real IDs.

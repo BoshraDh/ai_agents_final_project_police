@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+
 from bb_ai_12_police.crypto.commit_reveal import (
     CommitRevealLog,
     canonical_json,
@@ -9,6 +11,20 @@ from bb_ai_12_police.crypto.commit_reveal import (
     generate_nonce,
     verify_reveal,
 )
+
+
+def test_compute_commitment_matches_the_books_exact_formula():
+    """Hcommit = SHA256(canonical_json({...payload, "nonce": nonce})) — book ch.5.3.
+
+    The nonce is one more field inside the single canonically-serialized
+    record, not concatenated onto the JSON string separately.
+    """
+    payload = {"state": "s0", "move": "N", "intent": "truth"}
+    nonce = "deadbeef"
+    expected = hashlib.sha256(
+        canonical_json({**payload, "nonce": nonce}).encode("utf-8")
+    ).hexdigest()
+    assert compute_commitment(payload, nonce) == expected
 
 
 def test_canonical_json_sorts_keys_and_strips_whitespace():
