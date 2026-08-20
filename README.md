@@ -11,17 +11,18 @@ conflicts with the book, the book wins.
 **Team code:** `bb-ai-12`
 
 ## Status
-🚧 **Stage 5 of 7 complete** (base logic + MCP infra + blind strategy + language/scent +
-cloud tunneling). See `docs/PLAN.md` for the full build-stage roadmap and `docs/TODO.md` for
-exactly what's next.
+🚧 **Stage 6 of 7 complete** (base logic + MCP infra + blind strategy + language/scent +
+cloud tunneling + security). See `docs/PLAN.md` for the full build-stage roadmap and
+`docs/TODO.md` for exactly what's next.
 
 ## Quick start (localhost — development and smoke testing)
 
 ```bash
 uv sync
-uv run pytest -q --cov=src --cov-report=term-missing   # 61 tests, 92% coverage
+uv run pytest -q --cov=src --cov-report=term-missing   # 74 tests, 92% coverage
 uv run ruff check .                                      # zero violations
 uv run bb-ai-12-police check-config                       # sanity-check config loading
+uv run bb-ai-12-police declare                            # print a sealed Step-0 declaration
 ```
 
 Two-terminal round-trip smoke test (run the thief repo's equivalent command first in its own
@@ -61,7 +62,8 @@ artifacts) + `infra`/`shared` (MCP transport, config, rate limiting).
 - `docs/PLAN.md` — architecture and build-stage plan.
 - `docs/TODO.md` — live task list, updated every change.
 - `docs/PRD_base_logic.md` / `docs/PRD_mcp_infra.md` / `docs/PRD_strategy.md` /
-  `docs/PRD_language_scent.md` / `docs/PRD_cloud_tunnel.md` — per-stage detail (stages 1-5).
+  `docs/PRD_language_scent.md` / `docs/PRD_cloud_tunnel.md` / `docs/PRD_security_crypto.md` —
+  per-stage detail (stages 1-6).
 
 ## Academic report
 The full 6-section academic report (rules model, communication approach, decision-making,

@@ -50,13 +50,14 @@ server, no shared memory, and no referee.
 - Any shared runtime process between the two repos — they only ever talk over the network.
 
 ## Status
-Stage 1 (base logic), Stage 2 (MCP infra), Stage 3 (blind strategy), Stage 4 (language +
-scent) and Stage 5 (cloud exposure + tunneling) complete: FR-1, FR-2, FR-3 (geometric check
+Stage 1 (base logic) through Stage 6 (security) complete: FR-1, FR-2, FR-3 (geometric check
 only, no audit yet), FR-4, FR-5, FR-6 (real server+client round trip over localhost; a
 `tunnel` subcommand for a real public ngrok URL is built and unit-tested but not run live
 this session — see `docs/PRD_cloud_tunnel.md`), FR-7 (pure Manhattan-distance heuristic, zero
 LLM tokens), FR-8 (hints capped at `hint_max_words`, not yet deceptive/position-linked — see
-`docs/PRD_language_scent.md`), FR-11 (loading only, no handshake yet) implemented and tested.
-See `docs/PRD_base_logic.md` / `docs/PRD_mcp_infra.md` / `docs/PRD_strategy.md` /
-`docs/PRD_language_scent.md` / `docs/PRD_cloud_tunnel.md` for stage-specific detail and
-`docs/TODO.md` for what's next.
+`docs/PRD_language_scent.md`), FR-9 (every outbound move sealed via SHA-256 commit-reveal;
+`CommitRevealLog.audit()` re-verifies a full sub-game — see `docs/PRD_security_crypto.md`),
+FR-11 (loading + a pre-game config-agreement check, no full handshake yet) implemented and
+tested. See `docs/PRD_base_logic.md` / `docs/PRD_mcp_infra.md` / `docs/PRD_strategy.md` /
+`docs/PRD_language_scent.md` / `docs/PRD_cloud_tunnel.md` / `docs/PRD_security_crypto.md` for
+stage-specific detail and `docs/TODO.md` for what's next.

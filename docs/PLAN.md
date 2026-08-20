@@ -107,18 +107,6 @@ layering order.
 Still no barrier-placement decisions, no crypto, no real LLM providers — per the book's
 layering order.
 
-## Build stages (book's own priority order — each runs end-to-end before the next starts)
-1. Base logic — grid, movement, barriers, capture, scoring. No networking. *(done)*
-2. MCP infra — FastMCP server/client on localhost, no strategy yet. *(done)*
-3. Blind strategy — heuristic move-decision (Manhattan distance), still no language/scent.
-   *(done)*
-4. Language + scent — pheromone math, free-text hints, LLM plugged in for banter text only.
-   *(done)*
-5. Cloud exposure + tunneling — ngrok, environment separation. *(done)*
-6. **Security** — Commit-Reveal, Nonce, Step-0 hardware declaration, pre-game SHA-256
-   handshake. *(current)*
-7. Reporting shell — Gmail OAuth2 + Gatekeeper, Live GUI, Replay Viewer.
-
 ## Stage 5 — what was built
 - `mcp/tunnel.py` — `NgrokTunnel`: wraps a local `ngrok http <port>` process, `start()`
   returns the public `https://` URL read from ngrok's local API, `stop()` terminates it.
@@ -133,6 +121,40 @@ layering order.
 
 Still no barrier-placement decisions, no crypto, no real LLM providers, no live public
 exposure yet — per the book's layering order and the design decision above.
+
+## Build stages (book's own priority order — each runs end-to-end before the next starts)
+1. Base logic — grid, movement, barriers, capture, scoring. No networking. *(done)*
+2. MCP infra — FastMCP server/client on localhost, no strategy yet. *(done)*
+3. Blind strategy — heuristic move-decision (Manhattan distance), still no language/scent.
+   *(done)*
+4. Language + scent — pheromone math, free-text hints, LLM plugged in for banter text only.
+   *(done)*
+5. Cloud exposure + tunneling — ngrok, environment separation. *(done)*
+6. Security — Commit-Reveal, Nonce, Step-0 hardware declaration, pre-game SHA-256
+   agreement check. *(done)*
+7. **Reporting shell** — Gmail OAuth2 + Gatekeeper, Live GUI, Replay Viewer. *(current)*
+
+## Stage 6 — what was built
+- `crypto/commit_reveal.py` — `canonical_json`, `generate_nonce` (`secrets.token_hex`),
+  `compute_commitment`, `verify_reveal`: the core SHA-256 commit-reveal primitives.
+  `SealedMove`/`CommitRevealLog` seal one entry per turn and audit the whole sequence.
+- `crypto/step0.py` — `Step0Declaration`: seals `{team_code} + sysinfo` via the same
+  commit-reveal primitive ("signed" = sealed via SHA-256, not an asymmetric signature — no
+  such scheme was confirmed from the book text this session).
+- `shared/sysinfo.py` — `collect_sysinfo()`: python_version/platform/processor/machine.
+- `domain/negotiation.py` — `configs_match()`: the pre-game shared-config agreement check
+  (byte-identical `config/game.json`, via the SHA-256 that already existed since stage 1).
+- `runtime/peer_runtime.py` — `run_turn_loop` now seals every outbound move via
+  `CommitRevealLog.seal()` before sending it.
+- `cli.py declare` — new subcommand, manually run and confirmed printing a real sealed
+  declaration with `verify() = True`.
+- **Deliberately does not implement**: the wire-level Commit→Acknowledge→Reveal exchange
+  *between* peers (needs the same synchronized turn-taking protocol already deferred since
+  stage 3), or a full negotiation handshake beyond the config-match check. See
+  `docs/PRD_security_crypto.md` for the reasoning.
+
+Still no barrier-placement decisions, no real synchronized turn-taking, no live public
+exposure — per the book's layering order and the design decisions above.
 
 ## Open items / flags (tracked, not silently decided)
 - **`num_games` figure**: the reference repo's README states "the guidelines book mandates

@@ -2,12 +2,13 @@
 
 Starts this peer's MCP server in a background thread (still the stage-2
 STAY-echo stub — see `mcp/server.py`), then repeatedly asks the resolved
-brain for this turn's real move, sends it (with a real trash-talk hint) to
-the opponent, and updates the local `BeliefState` and `PheromoneField`.
-Full bidirectional synchronized turn-taking (so the inbound stub also
-replies with a real move/hint) is deferred to the negotiation/turn-handler
-work in a later stage — see `docs/PRD_strategy.md` for why that boundary
-was drawn here.
+brain for this turn's real move, seals it via `CommitRevealLog` (SHA-256
+commit, book's Commit->...->Audit protocol), sends it (with a real
+trash-talk hint) to the opponent, and updates the local `BeliefState` and
+`PheromoneField`. Full bidirectional synchronized turn-taking (so the
+inbound stub also replies with a real move/hint) is deferred to the
+negotiation/turn-handler work in a later stage — see `docs/PRD_strategy.md`
+for why that boundary was drawn here.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from __future__ import annotations
 import threading
 import time
 
+from bb_ai_12_police.crypto.commit_reveal import CommitRevealLog
 from bb_ai_12_police.domain.barriers import BarrierSet
 from bb_ai_12_police.domain.belief import BeliefState
 from bb_ai_12_police.domain.board import Board
@@ -40,6 +42,7 @@ class PeerRuntime:
         brain: BrainBase,
         trash_talk: TrashTalkProvider,
         opponent_scent: PheromoneField,
+        commit_log: CommitRevealLog,
     ) -> None:
         self.host = host
         self.port = port
@@ -50,6 +53,7 @@ class PeerRuntime:
         self.brain = brain
         self.trash_talk = trash_talk
         self.opponent_scent = opponent_scent
+        self.commit_log = commit_log
 
     def start_server(self, startup_delay_sec: float = 1.0) -> None:
         """Bind this peer's inbound MCP server in a background thread."""
@@ -69,8 +73,12 @@ class PeerRuntime:
         for turn in range(1, turns + 1):
             move = self._decide_move()
             self.belief.apply_own_move(move)
+            sealed = self.commit_log.seal(turn, {"direction": move.value, "turn": turn})
             hint = self.trash_talk.hint(turn)
             reply = self.transport.send_move(move.value, turn, hint)
             self.belief.apply_opponent_move(Direction(reply["direction"]))
             self.opponent_scent.step(self.belief.opponent_position)
-            print(f"[turn {turn}] sent {move.value!r} ({hint!r}), opponent replied {reply!r}")
+            print(
+                f"[turn {turn}] sent {move.value!r} (sealed {sealed.commitment[:8]}...) "
+                f"({hint!r}), opponent replied {reply!r}"
+            )

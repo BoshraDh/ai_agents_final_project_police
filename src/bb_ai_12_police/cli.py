@@ -3,17 +3,21 @@
 Stage 1: `check-config` reports the loaded config so the domain layer can be
 exercised standalone. Stage 2 adds `peer`, a manual round-trip smoke test
 for the MCP server/client wiring. Stage 5 adds `tunnel`, which publishes
-`my_port` publicly via ngrok so a real opponent team can reach this peer —
-the `replay` subcommand arrives once the crypto/report layers exist
-(stage 6-7).
+`my_port` publicly via ngrok so a real opponent team can reach this peer.
+Stage 6 adds `declare`, which prints this peer's sealed Step-0
+hardware/software declaration — the `replay` subcommand arrives once the
+report layer exists (stage 7).
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 import time
 
+from bb_ai_12_police.crypto.commit_reveal import CommitRevealLog
+from bb_ai_12_police.crypto.step0 import Step0Declaration
 from bb_ai_12_police.domain.barriers import BarrierSet
 from bb_ai_12_police.domain.belief import BeliefState
 from bb_ai_12_police.domain.board import Board
@@ -39,6 +43,9 @@ def main(argv: list[str] | None = None) -> int:
     tunnel = sub.add_parser("tunnel", help="expose my_port publicly via ngrok, print the URL")
     tunnel.add_argument("--repo-root", default=".")
 
+    declare = sub.add_parser("declare", help="print this peer's sealed Step-0 declaration")
+    declare.add_argument("--repo-root", default=".")
+
     args = parser.parse_args(argv)
 
     if args.command == "check-config":
@@ -47,6 +54,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_peer(args.repo_root, args.turns)
     if args.command == "tunnel":
         return _run_tunnel(args.repo_root)
+    if args.command == "declare":
+        return _run_declare(args.repo_root)
     return 1
 
 
@@ -66,6 +75,7 @@ def _run_peer(repo_root: str, turns: int) -> int:
         brain=resolve_brain(private),
         trash_talk=resolve_provider(private, shared),
         opponent_scent=PheromoneField.from_config(shared),
+        commit_log=CommitRevealLog(),
     )
     runtime.start_server()
     runtime.run_turn_loop(turns)
@@ -84,6 +94,23 @@ def _run_tunnel(repo_root: str) -> int:
             time.sleep(3600)
     except KeyboardInterrupt:
         tunnel.stop()
+    return 0
+
+
+def _run_declare(repo_root: str) -> int:
+    team_code = ConfigManager(repo_root).load_private()["game"]["group_id"]
+    declaration = Step0Declaration.create(team_code)
+    print(
+        json.dumps(
+            {
+                "payload": declaration.payload,
+                "nonce": declaration.nonce,
+                "commitment": declaration.commitment,
+            },
+            indent=2,
+        )
+    )
+    print(f"verify() = {declaration.verify()}")
     return 0
 
 

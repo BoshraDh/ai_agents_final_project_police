@@ -1,7 +1,8 @@
-"""Tests for the turn-loop (stage 4: real brain + hint), no real networking."""
+"""Tests for the turn-loop (stage 6: real brain + hint + sealed moves), no real networking."""
 
 from __future__ import annotations
 
+from bb_ai_12_police.crypto.commit_reveal import CommitRevealLog
 from bb_ai_12_police.domain.barriers import BarrierSet
 from bb_ai_12_police.domain.belief import BeliefState
 from bb_ai_12_police.domain.board import Board
@@ -31,6 +32,7 @@ def _runtime() -> PeerRuntime:
         brain=PoliceBrain(),
         trash_talk=TemplateProvider(hint_max_words=15),
         opponent_scent=PheromoneField.from_config(_PHEROMONE_CONFIG),
+        commit_log=CommitRevealLog(),
     )
 
 
@@ -52,3 +54,15 @@ def test_run_turn_loop_sends_the_requested_number_of_moves_with_hints(monkeypatc
     assert all(hint for _, _, hint in sent)
     assert runtime.belief.opponent_position == Position(3, 3)
     assert runtime.opponent_scent.intensity_at(Position(3, 3)) > 0
+
+
+def test_run_turn_loop_seals_every_move_and_passes_audit(monkeypatch):
+    runtime = _runtime()
+    monkeypatch.setattr(
+        runtime.transport,
+        "send_move",
+        lambda direction, turn, hint="": {"direction": "STAY", "turn": turn, "hint": "..."},
+    )
+    runtime.run_turn_loop(3)
+    assert runtime.commit_log.audit()
+    assert runtime.commit_log.tampered_turns() == []
