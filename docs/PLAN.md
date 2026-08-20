@@ -1,0 +1,73 @@
+# PLAN — bb-ai-12 Police Peer
+
+## Source of truth
+Game rules/binding parameters: `police_thief_p2p.pdf` v3.0.0 (book), Appendix ו for all
+numeric values. Where this repo differs from the book, the book wins. Submission process
+rules: `software_submission_guidelines-V3.pdf` (V3.00).
+
+## Architecture (target, built incrementally — see Build Stages below)
+
+```
+CLI (cli.py)
+   |
+SimulationSdk (sdk/) -- run_peer: N-sub-game series loop
+   |
+PeerRuntime (runtime/) -- negotiate -> turn loop -> audit
+   |-- state_machine.py   GamePhaseMachine, explicit legal-transition table
+   |-- deadline_tracker.py / watchdog.py   reliability
+   |
+mcp/        FastMCP server (receive_move tool) + client (McpTransport) + tunnel
+domain/     board, barriers, rules, scoring, protocol, pheromones, belief, negotiation
+peer/       turn_handler, sealing, handshake, summary
+crypto/     commit_reveal (SHA-256), step0 (hardware declaration)
+strategy/   base (BrainBase), heuristic_brain (default), police_brain, resolve_brain factory
+llm/        provider_base, template (default), ollama, claude_api, claude_cli
+report/     artifacts (4 JSON builders), emit, report_writer
+infra/      email_sender (Gmail OAuth2)
+shared/     config_manager (game.json+game.toml), api_gatekeeper, sysinfo, version
+gui/        live_gui (local-truth heatmap), replay_viewer (SHA-256 re-verify)
+```
+
+Sibling repo: `bb-ai-12-thief` (https://github.com/BoshraDh/ai_agents_final_project_thief) —
+structurally identical skeleton, opposite role's brain, mirrored ports (thief=8801,
+police=8802). `config/game.json` in both repos must stay byte-identical (verified via
+SHA-256 in the pre-game handshake, stage 6).
+
+## Build stages (book's own priority order — each runs end-to-end before the next starts)
+1. **Base logic** — grid, movement, barriers, capture, scoring. No networking. *(current)*
+2. MCP infra — FastMCP server/client on localhost, no strategy yet.
+3. Blind strategy — heuristic move-decision (Manhattan + Bayesian belief), still no
+   language/scent.
+4. Language + scent — pheromone math, free-text hints, LLM plugged in for banter text only.
+5. Cloud exposure + tunneling — ngrok/Localtonet, environment separation.
+6. Security — Commit-Reveal, Nonce, Step-0 hardware declaration, pre-game SHA-256 handshake.
+7. Reporting shell — Gmail OAuth2 + Gatekeeper, Live GUI, Replay Viewer.
+
+## Stage 1 — what was built
+- `domain/protocol.py` — `Role`, `Direction`, `Position`, `GameOutcome`, `MoveAction` (shared
+  value types, stdlib-only).
+- `domain/board.py` — `Board`: bounds checking, legal directions, start-position lookup.
+- `domain/barriers.py` — `BarrierSet`: police-only placement adjacent to self, capped at
+  `max_barriers`, irrevocable.
+- `domain/rules.py` — `is_legal_move`, `resolve_capture_claim`, `check_survival`,
+  `outcome_after_step` (single source of truth for "is the sub-game over").
+- `domain/scoring.py` — fixed score table from Appendix ו (20/5/5/10/2/0), never edited.
+- `shared/config_manager.py` — loads `config/game.json` (shared, signed) + `config/game.toml`
+  (private), exposes `game_json_sha256()` for the future pre-game handshake.
+- `config/game.json` + `config/game.toml` — populated with the book's binding defaults.
+- `cli.py` — minimal `check-config` subcommand only; `peer`/`replay` subcommands arrive in
+  stages 2 and 7.
+
+No networking, no crypto, no LLM yet — deliberately, per the book's own warning against
+skipping layers.
+
+## Open items / flags (tracked, not silently decided)
+- **`num_games` figure**: the reference repo's README states "the guidelines book mandates
+  6" for `network_and_league.num_games` (sub-games per series against one opponent, with
+  role-alternation). Our `config/game.json` currently ships the book Appendix ו's own
+  example value of `1`. This is a mutual, per-match setting — re-confirm the real mandated
+  value against the book text before the first real submission-counted match, and update
+  both repos' `config/game.json` together if it changes. See `docs/TODO.md`.
+- `agreed_between` in `config/game.json` currently lists `"<opponent-team-code>"` as a
+  placeholder — fill in the real opponent code once a match is negotiated, in both repos.
+- `config/game.toml` `[game].members` lists placeholder student IDs — fill in real IDs.

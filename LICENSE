@@ -1,0 +1,19 @@
+Educational Use License
+
+Copyright (c) 2026 BoshraDh (team bb-ai-12)
+
+This repository is submitted coursework for the "AI Agent Orchestration" final
+project at the University of Haifa, under Dr. Yoram Segal's instruction.
+
+Permission is granted to the course instructional staff to view, execute,
+clone, and evaluate this repository for grading and academic purposes.
+
+This project reuses architectural patterns (module layout, config-split
+convention) from the publicly documented reference simulator
+https://github.com/rmisegal/Game-P2P-Cop-Chase, per its own stated terms
+("a learning aid... you may read it to understand how a piece is
+implemented and reuse parts") and the course's explicit permission to reuse
+parts of that code. No source code from that repository was copied
+verbatim; only its documented structure and conventions were adapted.
+
+All other rights reserved.

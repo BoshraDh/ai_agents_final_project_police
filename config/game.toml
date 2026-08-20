@@ -1,0 +1,27 @@
+version = "1.0"
+
+[game]
+group_name = "bb-ai-12"
+group_id = "bb-ai-12"
+sub_game_number = 1
+members = ["<student-id-1>", "<student-id-2>"]
+repos = { cop = "https://github.com/BoshraDh/ai_agents_final_project_police", thief = "https://github.com/BoshraDh/ai_agents_final_project_thief" }
+
+[network]
+my_port = 8802
+opponent_url = "http://127.0.0.1:8801/mcp"
+turn_timeout_seconds = 180
+
+# [strategy]
+# thief_class = ""
+# police_class = "bb_ai_12_police.strategy.police_brain:PoliceBrain"
+
+[trash_talk]
+provider = "template"
+
+[llm]
+model = "claude-haiku-4-5"
+step_deadline_seconds = 30
+
+[email]
+recipient = "rmisegal+uoh26finalgame@gmail.com"
