@@ -122,18 +122,6 @@ layering order.
 Still no barrier-placement decisions, no crypto, no real LLM providers, no live public
 exposure yet — per the book's layering order and the design decision above.
 
-## Build stages (book's own priority order — each runs end-to-end before the next starts)
-1. Base logic — grid, movement, barriers, capture, scoring. No networking. *(done)*
-2. MCP infra — FastMCP server/client on localhost, no strategy yet. *(done)*
-3. Blind strategy — heuristic move-decision (Manhattan distance), still no language/scent.
-   *(done)*
-4. Language + scent — pheromone math, free-text hints, LLM plugged in for banter text only.
-   *(done)*
-5. Cloud exposure + tunneling — ngrok, environment separation. *(done)*
-6. Security — Commit-Reveal, Nonce, Step-0 hardware declaration, pre-game SHA-256
-   agreement check. *(done)*
-7. **Reporting shell** — Gmail OAuth2 + Gatekeeper, Live GUI, Replay Viewer. *(current)*
-
 ## Stage 6 — what was built
 - `crypto/commit_reveal.py` — `canonical_json`, `generate_nonce` (`secrets.token_hex`),
   `compute_commitment`, `verify_reveal`: the core SHA-256 commit-reveal primitives.
@@ -155,6 +143,45 @@ exposure yet — per the book's layering order and the design decision above.
 
 Still no barrier-placement decisions, no real synchronized turn-taking, no live public
 exposure — per the book's layering order and the design decisions above.
+
+## Build stages (book's own priority order — each runs end-to-end before the next starts)
+1. Base logic — grid, movement, barriers, capture, scoring. No networking. *(done)*
+2. MCP infra — FastMCP server/client on localhost, no strategy yet. *(done)*
+3. Blind strategy — heuristic move-decision (Manhattan distance), still no language/scent.
+   *(done)*
+4. Language + scent — pheromone math, free-text hints, LLM plugged in for banter text only.
+   *(done)*
+5. Cloud exposure + tunneling — ngrok, environment separation. *(done)*
+6. Security — Commit-Reveal, Nonce, Step-0 hardware declaration, pre-game SHA-256
+   agreement check. *(done)*
+7. Reporting shell — Gmail OAuth2 + Gatekeeper, Live GUI, Replay Viewer. *(done)*
+
+All 7 book-mandated build stages are now complete. What remains is the deferred integration
+work tracked below (synchronized turn-taking, barrier placement, the live Gmail/ngrok setup)
+— not a new stage, but the pieces those stages deliberately left as documented open items.
+
+## Stage 7 — what was built
+- `domain/game_ids.py` — `generate_game_id`/`artifact_filename`: id + filename scheme for the
+  four mandatory artifacts (placeholder scheme pending the book's exact format).
+- `report/artifacts.py` — `build_declaration/config/log/result`: four pure JSON builders.
+- `report/report_writer.py` — `write_artifacts`: writes the four files to `logs/<group_id>/`.
+- `shared/api_gatekeeper.py` — `TokenBucketGatekeeper` + `run_guarded`: token-bucket rate
+  limiter + concurrency cap + retry/backoff, from `rate_limiter_gatekeeper` config.
+- `infra/email_sender.py` — `build_message`/`send_report`: Gmail API message builder + send
+  wrapper (`gmail.send` scope only); consumes an existing `token.json`, never obtains one.
+- `gui/live_gui.py` — `LiveGui`: Tkinter grid + turn banner, local-truth-only (never an
+  omniscient board).
+- `gui/replay_viewer.py` — `ReplayViewer`/`load_log`/`verify_move`: step-through viewer
+  re-verifying every move's SHA-256 commitment, "Verified OK"/"TAMPERED".
+- `cli.py replay --log <path>` — new subcommand, opens the real replay viewer.
+- `crypto/commit_reveal.py` gains `CommitRevealLog.entries()` for the report layer.
+- **Manually verified the full pipeline end-to-end on disk**: real declaration + sealed moves
+  → all four artifacts built and written to `logs/bb-ai-12/` → reloaded from disk → every
+  move re-verified `True` → a reloaded move tampered with → `verify_move` correctly flips to
+  `False`. See `docs/PRD_reporting_shell.md` for the exact transcript.
+- **Deliberately did not build**: a `send-report` CLI command (no game-completion detection
+  yet to source a real outcome from) or run the live Gmail OAuth setup (the user's own guided
+  action — walkthrough steps are written and ready in `docs/PRD_reporting_shell.md`).
 
 ## Open items / flags (tracked, not silently decided)
 - **`num_games` figure**: the reference repo's README states "the guidelines book mandates

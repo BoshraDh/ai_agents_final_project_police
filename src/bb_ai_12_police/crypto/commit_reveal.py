@@ -66,3 +66,7 @@ class CommitRevealLog:
         return [
             e.turn for e in self._entries if not verify_reveal(e.payload, e.nonce, e.commitment)
         ]
+
+    def entries(self) -> list[SealedMove]:
+        """Read-only snapshot of the sealed moves, for building report artifacts."""
+        return list(self._entries)

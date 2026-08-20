@@ -51,3 +51,12 @@ def test_commit_reveal_log_audit_catches_a_tampered_entry():
     sealed.payload["direction"] = "S"  # simulate post-hoc tampering
     assert not log.audit()
     assert log.tampered_turns() == [1]
+
+
+def test_entries_returns_a_snapshot_not_a_live_view():
+    log = CommitRevealLog()
+    log.seal(1, {"direction": "N", "turn": 1})
+    snapshot = log.entries()
+    log.seal(2, {"direction": "S", "turn": 2})
+    assert len(snapshot) == 1
+    assert len(log.entries()) == 2

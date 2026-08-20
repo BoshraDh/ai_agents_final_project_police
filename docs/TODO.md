@@ -74,24 +74,27 @@
       peers, or `peer/handshake.py`/`peer/turn_handler.py` — both need the book's exact
       negotiation-protocol text re-confirmed first (see `docs/PRD_security_crypto.md`).
 
-## Next (Stage 7 — Reporting shell)
-- [ ] `report/artifacts.py` — build the four mandatory JSON artifacts
-      (`declaration_/config_/log_/result_<game_id>...json`) from `Step0Declaration`,
-      `CommitRevealLog`, and the game's final scores.
-- [ ] `report/emit.py` + `report/report_writer.py` — write the four files to
-      `logs/bb-ai-12/`.
-- [ ] `infra/email_sender.py` — Gmail OAuth2 (`gmail.send` scope only), attaches the four
-      JSON files, sends to `rmisegal+uoh26finalgame@gmail.com`.
-- [ ] `shared/api_gatekeeper.py` — Quota Manager + token-bucket rate limiter + DOS detector,
-      per the `rate_limiter_gatekeeper` config block, protecting the Gmail send call.
-- [ ] `gui/live_gui.py` — local-truth-only heatmap + turn banner (Tkinter).
-- [ ] `gui/replay_viewer.py` — step-through replay reusing `CommitRevealLog.audit()` for its
-      "Verified OK"/"TAMPERED" banner.
-- [ ] **Gmail OAuth setup is a live, guided step** — per the user's explicit request earlier
-      this session, walk her through installing/downloading whatever credential file
-      (`credentials.json`/`token.json`) is needed, live, saying "okay, now do X" at each step
-      rather than doing it silently.
-- [ ] Update this file, PLAN.md, PRD.md again once stage 7 is committed.
+## Done (Stage 7 — Reporting shell)
+- [x] `report/artifacts.py` — the four mandatory JSON artifact builders.
+- [x] `report/report_writer.py` — writes the four files to `logs/<group_id>/`.
+- [x] `infra/email_sender.py` — Gmail message builder + send wrapper (`gmail.send` scope
+      only); consumes an existing `token.json`, never obtains one unattended.
+- [x] `shared/api_gatekeeper.py` — token-bucket rate limiter + concurrency cap + retry/backoff,
+      from `rate_limiter_gatekeeper` config.
+- [x] `gui/live_gui.py` — local-truth-only Tkinter grid + turn banner.
+- [x] `gui/replay_viewer.py` — step-through replay re-verifying SHA-256, "Verified OK"/
+      "TAMPERED".
+- [x] `cli.py replay --log <path>` subcommand.
+- [x] Manually verified the full pipeline end-to-end on real files (declare → seal → build →
+      write → reload → verify → tamper → re-verify) — see `docs/PRD_reporting_shell.md`.
+- [x] 100 tests, 93% coverage, ruff-clean.
+- [x] Updated this file, PLAN.md, PRD.md, PRD_reporting_shell.md, README.md.
+- [x] **Explicitly did not build**: a `send-report` CLI command (needs game-completion
+      detection first) or run the live Gmail OAuth setup — walkthrough steps are written and
+      ready in `docs/PRD_reporting_shell.md` for when the user says go.
+
+All 7 book-mandated build stages are now complete. Remaining work is the deferred
+integration items below, plus playing real games once ready.
 
 ## Open flags (not blocking, must resolve before a real submission-counted match)
 - [ ] **`num_games`** — confirm against the book text whether the mandated per-series value
@@ -117,8 +120,21 @@
 - [ ] **Step-0 "signing"** — currently sealed via SHA-256 commit-reveal, not an asymmetric
       signature (none was confirmed from the book text this session). Revisit if the book
       specifies real public-key signatures for Step-0.
+- [ ] **Live Gmail OAuth setup** — `infra/email_sender.py` is built and unit-tested but has
+      never sent a real email; the user runs the walkthrough in `docs/PRD_reporting_shell.md`
+      herself (creating a Google Cloud project, `credentials.json`, the browser consent flow)
+      when she's ready, guided live, per her explicit request earlier in this project.
+- [ ] **Game-completion detection / `send-report` command** — `PeerRuntime.run_turn_loop`
+      still just runs exactly `--turns N`; it doesn't call `domain.rules.outcome_after_step`
+      to detect capture/survival and stop with a real `GameOutcome`. Needed before a
+      `send-report` CLI command can be built meaningfully (see `docs/PRD_reporting_shell.md`).
+- [ ] **`cli.py` is at 145/150 lines** — the next subcommand needs the CLI split into a
+      package (one module per subcommand) rather than one more function crammed in.
 
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
+- [ ] Write the full 6-section academic report in README.md (rules model, communication
+      approach, decision-making, LLM usage, live-GUI verification, replay-viewer
+      verification) — the underlying code for all six now exists, per `docs/PLAN.md`.
 - [ ] At least 2 full games played against a real opponent team before submission
       (`min_games_to_pass = 2`).
 - [ ] `git tag -a v1.0-submission` once feature-complete.

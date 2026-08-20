@@ -5,8 +5,8 @@ exercised standalone. Stage 2 adds `peer`, a manual round-trip smoke test
 for the MCP server/client wiring. Stage 5 adds `tunnel`, which publishes
 `my_port` publicly via ngrok so a real opponent team can reach this peer.
 Stage 6 adds `declare`, which prints this peer's sealed Step-0
-hardware/software declaration — the `replay` subcommand arrives once the
-report layer exists (stage 7).
+hardware/software declaration. Stage 7 adds `replay`, which steps through a
+saved `log_*.json` re-verifying every move's SHA-256 commitment.
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ import argparse
 import json
 import sys
 import time
+from pathlib import Path
 
 from bb_ai_12_police.crypto.commit_reveal import CommitRevealLog
 from bb_ai_12_police.crypto.step0 import Step0Declaration
@@ -22,6 +23,7 @@ from bb_ai_12_police.domain.barriers import BarrierSet
 from bb_ai_12_police.domain.belief import BeliefState
 from bb_ai_12_police.domain.board import Board
 from bb_ai_12_police.domain.pheromones import PheromoneField
+from bb_ai_12_police.gui.replay_viewer import ReplayViewer, load_log
 from bb_ai_12_police.llm.resolve_provider import resolve_provider
 from bb_ai_12_police.mcp.tunnel import NgrokTunnel
 from bb_ai_12_police.runtime.peer_runtime import PeerRuntime
@@ -46,6 +48,9 @@ def main(argv: list[str] | None = None) -> int:
     declare = sub.add_parser("declare", help="print this peer's sealed Step-0 declaration")
     declare.add_argument("--repo-root", default=".")
 
+    replay = sub.add_parser("replay", help="step through a saved log_*.json, verifying SHA-256")
+    replay.add_argument("--log", required=True)
+
     args = parser.parse_args(argv)
 
     if args.command == "check-config":
@@ -56,6 +61,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_tunnel(args.repo_root)
     if args.command == "declare":
         return _run_declare(args.repo_root)
+    if args.command == "replay":
+        return _run_replay(args.log)
     return 1
 
 
@@ -111,6 +118,13 @@ def _run_declare(repo_root: str) -> int:
         )
     )
     print(f"verify() = {declaration.verify()}")
+    return 0
+
+
+def _run_replay(log_path_str: str) -> int:
+    log = load_log(Path(log_path_str))
+    viewer = ReplayViewer(log)
+    viewer.root.mainloop()
     return 0
 
 

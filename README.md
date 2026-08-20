@@ -11,18 +11,21 @@ conflicts with the book, the book wins.
 **Team code:** `bb-ai-12`
 
 ## Status
-🚧 **Stage 6 of 7 complete** (base logic + MCP infra + blind strategy + language/scent +
-cloud tunneling + security). See `docs/PLAN.md` for the full build-stage roadmap and
-`docs/TODO.md` for exactly what's next.
+✅ **All 7 build stages complete** (base logic + MCP infra + blind strategy + language/scent
++ cloud tunneling + security + reporting shell). See `docs/PLAN.md` for what was built at
+each stage and `docs/TODO.md` for the deferred integration work still open (synchronized
+turn-taking, barrier placement, the live Gmail/ngrok setup) before a real submission-counted
+match.
 
 ## Quick start (localhost — development and smoke testing)
 
 ```bash
 uv sync
-uv run pytest -q --cov=src --cov-report=term-missing   # 74 tests, 92% coverage
+uv run pytest -q --cov=src --cov-report=term-missing   # 100 tests, 93% coverage
 uv run ruff check .                                      # zero violations
 uv run bb-ai-12-police check-config                       # sanity-check config loading
 uv run bb-ai-12-police declare                            # print a sealed Step-0 declaration
+uv run bb-ai-12-police replay --log logs/bb-ai-12/log_*.json   # step through a saved log
 ```
 
 Two-terminal round-trip smoke test (run the thief repo's equivalent command first in its own
@@ -62,14 +65,15 @@ artifacts) + `infra`/`shared` (MCP transport, config, rate limiting).
 - `docs/PLAN.md` — architecture and build-stage plan.
 - `docs/TODO.md` — live task list, updated every change.
 - `docs/PRD_base_logic.md` / `docs/PRD_mcp_infra.md` / `docs/PRD_strategy.md` /
-  `docs/PRD_language_scent.md` / `docs/PRD_cloud_tunnel.md` / `docs/PRD_security_crypto.md` —
-  per-stage detail (stages 1-6).
+  `docs/PRD_language_scent.md` / `docs/PRD_cloud_tunnel.md` / `docs/PRD_security_crypto.md` /
+  `docs/PRD_reporting_shell.md` — per-stage detail (all 7 stages).
 
 ## Academic report
 The full 6-section academic report (rules model, communication approach, decision-making,
-LLM usage, live-GUI verification, replay-viewer verification) will be added to this README
-once the corresponding stages (GUI/replay, stage 7) are implemented, per the submission
-guidelines.
+LLM usage, live-GUI verification, replay-viewer verification) is not yet written up here —
+all the underlying code it would describe (strategy, pheromones, commit-reveal, the live GUI,
+the replay viewer) now exists and is tested, per `docs/PLAN.md`. Writing the report itself is
+still open, tracked in `docs/TODO.md`.
 
 ## Reference & attribution
 Structural patterns (module layout, `game.json`/`game.toml` split, `SimulationSdk`/
