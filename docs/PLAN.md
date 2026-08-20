@@ -224,7 +224,36 @@ ch.8.3's state machine, was enough to replace the STAY-echo stub with the real t
   still deferred).
 - 117 tests, 93% coverage, ruff-clean.
 
+## Automatic end-of-game detection — 2026-08-20 (closes the stage-7 deferred item)
+`PeerRuntime.run_turn_loop` previously always ran exactly `--turns N` with no awareness of the
+actual game rules. No new detection logic was needed — `domain.rules.outcome_after_step`
+(stage 1) already answers "is the sub-game over, and how"; the only new piece was a small pure
+mapper, `cop_and_thief_positions(role, own_position, opponent_position)`, translating a peer's
+role-relative `BeliefState` into the rules layer's role-neutral `(cop_pos, thief_pos)` order:
+- `domain/rules.py` gains `cop_and_thief_positions`.
+- `runtime/peer_runtime.py`'s `PeerRuntime` gains `role: Role`/`survival_threshold: int`
+  constructor params, `self.outcome`/`self.final_turn` state, and `_check_outcome(turn)`;
+  `run_turn_loop` now stops early with a `GAME OVER: <outcome> — scores {...}` print the
+  moment either capture or survival is reached.
+- `cli.py` split into a `cli/` package (one module per subcommand) — the flat file hit the
+  150-line cap once `role`/`survival_threshold` were added to the `peer` subcommand.
+- Both peers independently reach the same CAPTURED/SURVIVED conclusion from the same round's
+  honestly-revealed positions with no extra coordination message — a direct consequence of the
+  P2P zero-shared-state design plus the existing honest-relay assumption.
+- 122 tests, 93% coverage, ruff-clean. See `docs/PRD_end_of_game_detection.md` for the full
+  design reasoning and acceptance criteria.
+- **Live two-process verification was attempted and blocked by a real, pre-existing,
+  100%-reproducible bug in the turn protocol** (not caused by this feature) — see
+  `docs/PRD_end_of_game_detection.md` and the new high-priority open flag in `docs/TODO.md`.
+  Verification instead relies on the unit-test suite, which directly exercises the same
+  early-stop code path via a stubbed transport.
+
 ## Open items / flags (tracked, not silently decided)
+- **NEW, HIGH PRIORITY — commit-reveal round-1 race (100% reproducible)**: two freshly-started
+  independent peer processes reliably crash on round 1 because the wire protocol never
+  actually waits for both sides to commit before either reveals (the book's Acknowledge step's
+  stated purpose). See `docs/TODO.md` for the full root-cause writeup — this is a hard blocker
+  for any real live match, not fixed in this pass.
 - `agreed_between` in `config/game.json` currently lists `"<opponent-team-code>"` as a
   placeholder — fill in the real opponent code once a match is negotiated, in both repos.
 - `config/game.toml` `[game].members` lists placeholder student IDs — fill in real IDs.

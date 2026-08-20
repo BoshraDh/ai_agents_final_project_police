@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from bb_ai_12_police.domain.barriers import BarrierSet
 from bb_ai_12_police.domain.board import Board
-from bb_ai_12_police.domain.protocol import Direction, GameOutcome, Position
+from bb_ai_12_police.domain.protocol import Direction, GameOutcome, Position, Role
 
 
 def is_legal_move(board: Board, barriers: BarrierSet, pos: Position, direction: Direction) -> bool:
@@ -54,3 +54,12 @@ def outcome_after_step(
     if check_survival(steps_survived, survival_threshold):
         return GameOutcome.SURVIVED
     return GameOutcome.ONGOING
+
+
+def cop_and_thief_positions(
+    role: Role, own_position: Position, opponent_position: Position
+) -> tuple[Position, Position]:
+    """Maps this peer's belief-frame (`own`/`opponent`) to `(cop, thief)` order."""
+    if role is Role.POLICE:
+        return own_position, opponent_position
+    return opponent_position, own_position

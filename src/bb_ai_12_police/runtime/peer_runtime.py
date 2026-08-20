@@ -1,19 +1,16 @@
 """Turn-loop for one standalone peer process — the real per-round protocol.
 
-Starts this peer's MCP server (now exposing submit_commit/submit_reveal —
-see `mcp/server.py`) in a background thread, then for each round: decides a
-move via the resolved brain, builds a state snapshot + intent, seals it
-(`CommitRevealLog`, for the eventual end-of-game audit), registers the
-reveal locally (`TurnHandler.prepare_own_reveal`) so an inbound call from
-the opponent can already answer with it, sends the commit then the reveal
-to the opponent (receiving the opponent's own reveal back in the same
-round trip — see `mcp/client.py`), and updates `BeliefState`/
-`PheromoneField` from what the opponent actually revealed.
-`GamePhaseMachine` enforces the legal per-round phase sequence; a failure
-during the commit-send or reveal-send moves the phase to `TECHNICAL_LOSS`
-and re-raises (this session's interpretation of the book's diagram, which
-doesn't enumerate every possible network-failure point — see
-`docs/PRD_security_crypto.md`).
+Starts this peer's MCP server in a background thread, then for each round:
+decides a move, seals it (`CommitRevealLog`), exchanges commit+reveal with
+the opponent (`mcp/client.py`), and updates `BeliefState`/`PheromoneField`
+from what the opponent actually revealed. `GamePhaseMachine` enforces the
+legal per-round phase sequence; a network failure moves the phase to
+`TECHNICAL_LOSS`. After each round, `domain.rules.outcome_after_step`
+checks for capture/survival on the just-updated (honestly-relayed, hence
+exact) `BeliefState` and stops the loop early when either is reached —
+both peers independently reach the same conclusion from the same round's
+revealed positions, no extra coordination needed. See
+`docs/PRD_turn_protocol.md` for the full design reasoning.
 """
 
 from __future__ import annotations
@@ -26,7 +23,9 @@ from bb_ai_12_police.domain.barriers import BarrierSet
 from bb_ai_12_police.domain.belief import BeliefState
 from bb_ai_12_police.domain.board import Board
 from bb_ai_12_police.domain.pheromones import PheromoneField
-from bb_ai_12_police.domain.protocol import Direction
+from bb_ai_12_police.domain.protocol import Direction, GameOutcome, Role
+from bb_ai_12_police.domain.rules import cop_and_thief_positions, outcome_after_step
+from bb_ai_12_police.domain.scoring import scores_for_both
 from bb_ai_12_police.llm.provider_base import TrashTalkProvider
 from bb_ai_12_police.mcp.client import McpTransport
 from bb_ai_12_police.mcp.server import build_server, run_server
@@ -44,6 +43,8 @@ class PeerRuntime:
         port: int,
         opponent_url: str,
         server_name: str,
+        role: Role,
+        survival_threshold: int,
         board: Board,
         barriers: BarrierSet,
         belief: BeliefState,
@@ -56,6 +57,8 @@ class PeerRuntime:
         self.host = host
         self.port = port
         self.server_name = server_name
+        self.role = role
+        self.survival_threshold = survival_threshold
         self.transport = McpTransport(opponent_url)
         self.board = board
         self.barriers = barriers
@@ -66,6 +69,8 @@ class PeerRuntime:
         self.commit_log = commit_log
         self.turn_handler = turn_handler
         self.machine = GamePhaseMachine()
+        self.outcome = GameOutcome.ONGOING
+        self.final_turn: int | None = None
 
     def start_server(self, startup_delay_sec: float = 1.0) -> None:
         """Bind this peer's inbound MCP server in a background thread."""
@@ -88,8 +93,14 @@ class PeerRuntime:
             "turn": turn,
         }
 
+    def _check_outcome(self, turn: int) -> GameOutcome:
+        cop_pos, thief_pos = cop_and_thief_positions(
+            self.role, self.belief.own_position, self.belief.opponent_position
+        )
+        return outcome_after_step(cop_pos, thief_pos, turn, self.survival_threshold)
+
     def run_turn_loop(self, turns: int) -> None:
-        """Play `turns` real rounds via the book's commit-reveal protocol."""
+        """Play up to `turns` real rounds; stops early on capture or survival."""
         for turn in range(1, turns + 1):
             self.machine.transition("COMPUTING_MOVE")
             move = self._decide_move()
@@ -124,3 +135,10 @@ class PeerRuntime:
                 f"[turn {turn}] committed {sealed.commitment[:8]}..., revealed "
                 f"{move.value!r} ({hint!r}), opponent revealed {reply!r}"
             )
+
+            self.outcome = self._check_outcome(turn)
+            if self.outcome is not GameOutcome.ONGOING:
+                self.final_turn = turn
+                scores = {r.value: s for r, s in scores_for_both(self.outcome).items()}
+                print(f"[turn {turn}] GAME OVER: {self.outcome.value} — scores {scores}")
+                break

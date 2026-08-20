@@ -152,7 +152,58 @@ re-read the relevant chapters directly instead of leaving these as open guesses:
 - [x] 117 tests, 93% coverage, ruff-clean.
 - [x] Updated this file, PLAN.md, PRD.md, PRD_turn_protocol.md, README.md.
 
+## Done (automatic end-of-game detection — 2026-08-20)
+- [x] `domain/rules.py` — `cop_and_thief_positions(role, own_position, opponent_position)`:
+      maps this peer's role-relative `BeliefState` (own/opponent) into the rules layer's
+      role-neutral `(cop_pos, thief_pos)` order that `outcome_after_step` expects.
+- [x] `runtime/peer_runtime.py` — `PeerRuntime` now takes `role: Role` and
+      `survival_threshold: int`; tracks `self.outcome` (`GameOutcome`, starts `ONGOING`) and
+      `self.final_turn`. New `_check_outcome(turn)` calls `domain.rules.outcome_after_step` on
+      the just-updated `BeliefState` after every round; `run_turn_loop` now stops early and
+      prints a `GAME OVER: <outcome> — scores {...}` line (via `domain.scoring.scores_for_both`)
+      the moment either capture or survival is reached, instead of always running the full
+      requested `--turns N`.
+- [x] `cli.py` split into a `cli/` package (`__init__.py`, `check_config.py`, `peer.py`,
+      `tunnel.py`, `declare.py`, `replay.py`) — the flat file hit the 150-line cap once
+      `role`/`survival_threshold` were added to the `peer` subcommand's `PeerRuntime` call;
+      `cli/peer.py` now hardcodes `role=Role.POLICE` and reads `survival_threshold` from
+      `config/game.json`'s `movement_and_barriers.survival_threshold`.
+- [x] Both peers can independently reach the same CAPTURED/SURVIVED conclusion from the same
+      round's honestly-revealed positions with no extra coordination message — a direct
+      consequence of the P2P zero-shared-state design plus the existing honest-relay
+      assumption; documented in `runtime/peer_runtime.py`'s module docstring.
+- [x] 12 new/updated tests (`cop_and_thief_positions` x2, early-stop-on-capture,
+      early-stop-on-survival, stays-ongoing-when-the-turn-cap-is-hit-first, plus the flexible
+      `_runtime()` fixture all existing tests now share) — 122 tests, 93% coverage, ruff-clean.
+- [x] **Found a real, 100%-reproducible protocol bug while attempting the live two-process
+      verification for this feature** — see the new open flag below (not caused by this
+      feature; pre-existing in the commit-reveal turn protocol since the last stage).
+- [x] Updated this file, PLAN.md, PRD.md, README.md in both repos.
+
 ## Open flags (not blocking, must resolve before a real submission-counted match)
+- [ ] **NEW, HIGH PRIORITY — commit-reveal round-1 race, 100% reproducible**: a fresh
+      `bb-ai-12-police peer` + `bb-ai-12-thief peer` run, started as two independent processes
+      (as a real match against another team necessarily would be — no shared start signal),
+      fails on round 1 every time this session (2 separate attempts, different startup
+      staggering): whichever peer's outbound `send_reveal` call reaches the opponent's
+      `submit_reveal` handler *before* the opponent's own main-loop thread has locally called
+      `TurnHandler.prepare_own_reveal` for that same round gets `ValueError: no own reveal
+      prepared for round 1 yet` (raised inside `submit_reveal`, surfaced to the caller as a
+      `fastmcp.exceptions.ToolError`), which crashes that side; the other side's next network
+      call then fails too once the first process (and its server) has exited. Root cause: the
+      book's 4-step protocol calls for an explicit **Acknowledge** step whose stated purpose is
+      to "ensure reveal only after BOTH sides have committed" — this implementation never
+      actually waits for that; each peer sends its commit then immediately calls the
+      opponent's `submit_reveal`, which only works if the opponent happens to have already
+      raced ahead to prepare its own reveal locally first. `startup_delay_sec` and process
+      start-time staggering only change the odds, they don't fix the underlying missing
+      synchronization. **Needs a real fix** (e.g. `submit_commit` blocks/queues until both
+      commits are in before any `submit_reveal` can succeed, or an explicit `acknowledge`
+      wire call peers exchange before either reveals) before any live match against another
+      team can be attempted — this is a hard blocker, not a nice-to-have. Not fixed in this
+      pass (out of scope for the end-of-game-detection task that surfaced it); tracked here
+      instead of silently patched. See `docs/PRD_turn_protocol.md` for the original protocol
+      design this bug lives in.
 - [ ] **Step-0 "signing" key** — book ch.5.5 mentions signing with "a key supplied in
       advance"; no such key has been issued/found yet. Revisit if/when one is supplied (e.g.
       in a course announcement or the reference repo's own Step-0 code), and treat the current
@@ -179,12 +230,10 @@ re-read the relevant chapters directly instead of leaving these as open guesses:
 - [ ] **Live ngrok tunnel** — `mcp/tunnel.py` is built and unit-tested but never run live this
       session (see `docs/PRD_cloud_tunnel.md`); the user runs `bb-ai-12-police tunnel` herself
       once ngrok is installed and she's ready for a real match.
-- [ ] **Game-completion detection / `send-report` command** — `PeerRuntime.run_turn_loop`
-      still just runs exactly `--turns N`; it doesn't call `domain.rules.outcome_after_step`
-      to detect capture/survival and stop with a real `GameOutcome`. Needed before a
-      `send-report` CLI command can be built meaningfully (see `docs/PRD_reporting_shell.md`).
-- [ ] **`cli.py` is at 148/150 lines** — the next subcommand needs the CLI split into a
-      package (one module per subcommand) rather than one more function crammed in.
+- [ ] **`send-report` command** — game-completion detection is now built (see "Done
+      (automatic end-of-game detection)" above), so a `send-report` CLI command that builds +
+      emails the four JSON artifacts automatically once `PeerRuntime.outcome` leaves `ONGOING`
+      can now be built meaningfully (see `docs/PRD_reporting_shell.md`).
 - [ ] **Known test flakiness (environmental, not a code bug)**: `tests/gui/` occasionally hits
       `_tkinter.TclError: Can't find a usable init.tcl` under this Windows machine's file-I/O
       contention when many Tk interpreters are created/destroyed back-to-back in one `pytest`

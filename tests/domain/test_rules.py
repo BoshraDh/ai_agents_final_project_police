@@ -1,8 +1,9 @@
 from bb_ai_12_police.domain.barriers import BarrierSet
 from bb_ai_12_police.domain.board import Board
-from bb_ai_12_police.domain.protocol import Direction, GameOutcome, Position
+from bb_ai_12_police.domain.protocol import Direction, GameOutcome, Position, Role
 from bb_ai_12_police.domain.rules import (
     check_survival,
+    cop_and_thief_positions,
     is_legal_move,
     legal_moves,
     outcome_after_step,
@@ -60,3 +61,15 @@ def test_outcome_after_step_ongoing():
         Position(0, 0), Position(3, 3), steps_survived=1, survival_threshold=35
     )
     assert outcome == GameOutcome.ONGOING
+
+
+def test_cop_and_thief_positions_for_police_role():
+    cop, thief = cop_and_thief_positions(Role.POLICE, Position(0, 0), Position(3, 3))
+    assert cop == Position(0, 0)
+    assert thief == Position(3, 3)
+
+
+def test_cop_and_thief_positions_for_thief_role():
+    cop, thief = cop_and_thief_positions(Role.THIEF, Position(0, 0), Position(3, 3))
+    assert cop == Position(3, 3)
+    assert thief == Position(0, 0)

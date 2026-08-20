@@ -11,18 +11,24 @@ conflicts with the book, the book wins.
 **Team code:** `bb-ai-12`
 
 ## Status
-✅ **All 7 build stages complete, plus the real turn-taking protocol** (base logic + MCP
-infra + blind strategy + language/scent + cloud tunneling + security + reporting shell +
-real Commit→Acknowledge→Reveal turn protocol, replacing the old STAY-echo stub). See
-`docs/PLAN.md` for what was built at each stage and `docs/TODO.md` for the deferred
-integration work still open (barrier placement, deceptive hints, the live Gmail/ngrok setup)
-before a real submission-counted match.
+✅ **All 7 build stages complete, plus the real turn-taking protocol and automatic
+end-of-game detection** (base logic + MCP infra + blind strategy + language/scent + cloud
+tunneling + security + reporting shell + real Commit→Acknowledge→Reveal turn protocol +
+automatic capture/survival stop). See `docs/PLAN.md` for what was built at each stage and
+`docs/TODO.md` for the deferred integration work still open before a real submission-counted
+match.
+
+⚠️ **Known hard blocker, flagged not fixed**: two freshly-started, independent peer processes
+reliably fail on round 1 of a real match due to a missing synchronization point in the
+commit-reveal wire protocol (the book's Acknowledge step never actually waits for both sides
+to commit before either reveals). See `docs/TODO.md` for the full root-cause writeup — this
+must be fixed before attempting a real match against another team.
 
 ## Quick start (localhost — development and smoke testing)
 
 ```bash
 uv sync
-uv run pytest -q --cov=src --cov-report=term-missing   # 117 tests, 93% coverage
+uv run pytest -q --cov=src --cov-report=term-missing   # 122 tests, 93% coverage
 uv run ruff check .                                      # zero violations
 uv run bb-ai-12-police check-config                       # sanity-check config loading
 uv run bb-ai-12-police declare                            # print a sealed Step-0 declaration
@@ -67,8 +73,9 @@ artifacts) + `infra`/`shared` (MCP transport, config, rate limiting).
 - `docs/TODO.md` — live task list, updated every change.
 - `docs/PRD_base_logic.md` / `docs/PRD_mcp_infra.md` / `docs/PRD_strategy.md` /
   `docs/PRD_language_scent.md` / `docs/PRD_cloud_tunnel.md` / `docs/PRD_security_crypto.md` /
-  `docs/PRD_reporting_shell.md` / `docs/PRD_turn_protocol.md` — per-stage detail (all 7
-  stages plus the real turn-taking protocol).
+  `docs/PRD_reporting_shell.md` / `docs/PRD_turn_protocol.md` /
+  `docs/PRD_end_of_game_detection.md` — per-stage detail (all 7 stages plus the real
+  turn-taking protocol and automatic end-of-game detection).
 
 ## Academic report
 The full 6-section academic report (rules model, communication approach, decision-making,

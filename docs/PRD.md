@@ -50,16 +50,27 @@ server, no shared memory, and no referee.
 - Any shared runtime process between the two repos — they only ever talk over the network.
 
 ## Status
-All 7 book-mandated build stages complete, plus the real turn-taking protocol (2026-08-20)
-that closes the stage-2/3/6 STAY-echo-stub deferral: FR-1 through FR-9 implemented and tested
-and now exercised genuinely bidirectionally — both peers' inbound and outbound moves are real
-strategy decisions exchanged via the book's confirmed Commit→Acknowledge→Reveal protocol (see
-`docs/PRD_turn_protocol.md`). FR-9's audit is still local self-audit per peer, not yet a
-mutual end-of-game log exchange; FR-10 (the four JSON artifacts build and write correctly;
+All 7 book-mandated build stages complete, plus the real turn-taking protocol and automatic
+end-of-game detection (2026-08-20): FR-1 through FR-9 implemented and tested and now exercised
+genuinely bidirectionally — both peers' inbound and outbound moves are real strategy decisions
+exchanged via the book's confirmed Commit→Acknowledge→Reveal protocol (see
+`docs/PRD_turn_protocol.md`), and `PeerRuntime.run_turn_loop` now stops automatically on
+capture or survival instead of always running the full requested turn count (see
+`docs/PRD_end_of_game_detection.md`). FR-9's audit is still local self-audit per peer, not yet
+a mutual end-of-game log exchange; FR-10 (the four JSON artifacts build and write correctly;
 Gmail sending is built, unit-tested, **and verified with a real send** to
-`rmisegal+uoh26finalgame@gmail.com` — see `docs/PRD_reporting_shell.md`); FR-11 (loading + a
-pre-game config-agreement check, no full negotiation handshake yet). See
-`docs/PRD_base_logic.md` / `docs/PRD_mcp_infra.md` / `docs/PRD_strategy.md` /
+`rmisegal+uoh26finalgame@gmail.com` — see `docs/PRD_reporting_shell.md`; a `send-report`
+command that fires automatically off the new outcome-detection is still open); FR-11 (loading
++ a pre-game config-agreement check, no full negotiation handshake yet).
+
+**A hard blocker for any real live match was found and flagged (not yet fixed)**: two
+freshly-started, independent peer processes reliably fail on round 1 due to a missing
+synchronization point in the wire protocol (the book's Acknowledge step never actually waits
+for both sides to commit before either reveals). See `docs/PRD_end_of_game_detection.md` and
+the high-priority open flag in `docs/TODO.md`.
+
+See `docs/PRD_base_logic.md` / `docs/PRD_mcp_infra.md` / `docs/PRD_strategy.md` /
 `docs/PRD_language_scent.md` / `docs/PRD_cloud_tunnel.md` / `docs/PRD_security_crypto.md` /
-`docs/PRD_reporting_shell.md` / `docs/PRD_turn_protocol.md` for stage-specific detail and
-`docs/TODO.md` for what's next (deferred integration work, not a new stage).
+`docs/PRD_reporting_shell.md` / `docs/PRD_turn_protocol.md` / `docs/PRD_end_of_game_detection.md`
+for stage-specific detail and `docs/TODO.md` for what's next (deferred integration work, not a
+new stage).

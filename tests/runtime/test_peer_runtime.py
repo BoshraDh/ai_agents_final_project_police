@@ -7,7 +7,7 @@ from bb_ai_12_police.domain.barriers import BarrierSet
 from bb_ai_12_police.domain.belief import BeliefState
 from bb_ai_12_police.domain.board import Board
 from bb_ai_12_police.domain.pheromones import PheromoneField
-from bb_ai_12_police.domain.protocol import Direction, Position
+from bb_ai_12_police.domain.protocol import Direction, GameOutcome, Position, Role
 from bb_ai_12_police.llm.template_provider import TemplateProvider
 from bb_ai_12_police.peer.turn_handler import TurnHandler
 from bb_ai_12_police.runtime.peer_runtime import PeerRuntime
@@ -22,15 +22,23 @@ _PHEROMONE_CONFIG = {
 }
 
 
-def _runtime() -> PeerRuntime:
+def _runtime(
+    own_position: Position | None = None,
+    opponent_position: Position | None = None,
+    survival_threshold: int = 100,
+) -> PeerRuntime:
+    own_position = own_position if own_position is not None else Position(0, 0)
+    opponent_position = opponent_position if opponent_position is not None else Position(3, 3)
     return PeerRuntime(
         host="127.0.0.1",
         port=9999,
         opponent_url="http://unused",
         server_name="bb-ai-12-police",
+        role=Role.POLICE,
+        survival_threshold=survival_threshold,
         board=Board(size=7),
         barriers=BarrierSet(max_barriers=14),
-        belief=BeliefState(own_position=Position(0, 0), opponent_position=Position(3, 3)),
+        belief=BeliefState(own_position=own_position, opponent_position=opponent_position),
         brain=PoliceBrain(),
         trash_talk=TemplateProvider(hint_max_words=15),
         opponent_scent=PheromoneField.from_config(_PHEROMONE_CONFIG),
@@ -106,3 +114,34 @@ def test_a_failed_commit_send_moves_the_machine_to_technical_loss(monkeypatch):
     except RuntimeError:
         pass
     assert runtime.machine.state == "TECHNICAL_LOSS"
+
+
+def test_run_turn_loop_stops_early_on_capture(monkeypatch):
+    # Police starts adjacent to the (stationary, per the stub) thief -> captures in round 1.
+    runtime = _runtime(own_position=Position(3, 2), opponent_position=Position(3, 3))
+    calls = _stub_transport(runtime, monkeypatch)
+    runtime.run_turn_loop(10)
+
+    assert runtime.outcome == GameOutcome.CAPTURED
+    assert runtime.final_turn == 1
+    reveals = [c for kind, c in calls if kind == "reveal"]
+    assert len(reveals) == 1  # the loop stopped after round 1, not all 10
+
+
+def test_run_turn_loop_stops_early_on_survival(monkeypatch):
+    runtime = _runtime(survival_threshold=2)
+    calls = _stub_transport(runtime, monkeypatch)
+    runtime.run_turn_loop(10)
+
+    assert runtime.outcome == GameOutcome.SURVIVED
+    assert runtime.final_turn == 2
+    reveals = [c for kind, c in calls if kind == "reveal"]
+    assert len(reveals) == 2
+
+
+def test_run_turn_loop_stays_ongoing_when_the_cap_is_reached_first(monkeypatch):
+    runtime = _runtime()
+    _stub_transport(runtime, monkeypatch)
+    runtime.run_turn_loop(2)
+    assert runtime.outcome == GameOutcome.ONGOING
+    assert runtime.final_turn is None
