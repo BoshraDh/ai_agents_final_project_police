@@ -67,9 +67,14 @@ command that fires automatically off the new outcome-detection is still open); F
 freshly-started, independent peer processes previously failed on round 1 due to a missing
 synchronization point in the wire protocol (the book's Acknowledge step never actually waited
 for both sides to commit before either revealed). `TurnHandler.wait_for_own_reveal` now blocks
-an inbound reveal until this peer's own reveal is locally ready, closing the race. Re-verified
-live: a full 40-turn two-process run now exchanges real commit-reveal rounds continuously and
-the police side auto-detects `GAME OVER` correctly. See `docs/TODO.md` for full detail.
+an inbound reveal until this peer's own reveal is locally ready, closing the race. A second,
+lower-severity issue found in the same verification pass — whichever side reached `GAME OVER`
+first used to exit immediately, occasionally cutting off the opponent's still-in-flight
+final-round call — is also fixed: `peer` now waits briefly after the outcome leaves `ONGOING`
+before exiting. Re-verified live: a full 40-turn two-process run now exchanges real
+commit-reveal rounds continuously, the police side auto-detects `GAME OVER` correctly, and
+both processes exit cleanly with no errors. No known blockers remain for a real live match.
+See `docs/TODO.md` for full detail.
 
 See `docs/PRD_base_logic.md` / `docs/PRD_mcp_infra.md` / `docs/PRD_strategy.md` /
 `docs/PRD_language_scent.md` / `docs/PRD_cloud_tunnel.md` / `docs/PRD_security_crypto.md` /
