@@ -87,17 +87,6 @@ Still no strategy (hardcoded STAY), no crypto, no LLM — per the book's layerin
 Still no barrier-placement decisions, no scent/hints, no crypto, no LLM — per the book's
 layering order.
 
-## Build stages (book's own priority order — each runs end-to-end before the next starts)
-1. Base logic — grid, movement, barriers, capture, scoring. No networking. *(done)*
-2. MCP infra — FastMCP server/client on localhost, no strategy yet. *(done)*
-3. Blind strategy — heuristic move-decision (Manhattan distance), still no language/scent.
-   *(done)*
-4. Language + scent — pheromone math, free-text hints, LLM plugged in for banter text only.
-   *(done)*
-5. **Cloud exposure + tunneling** — ngrok/Localtonet, environment separation. *(current)*
-6. Security — Commit-Reveal, Nonce, Step-0 hardware declaration, pre-game SHA-256 handshake.
-7. Reporting shell — Gmail OAuth2 + Gatekeeper, Live GUI, Replay Viewer.
-
 ## Stage 4 — what was built
 - `domain/pheromones.py` — `PheromoneField`: τij(t+1)=max(0,(1-ρ)τij(t)+Δτij), single-cell
   deposit+decay (spatial spread across `pheromone_grid_size` not yet implemented — needs
@@ -117,6 +106,33 @@ layering order.
 
 Still no barrier-placement decisions, no crypto, no real LLM providers — per the book's
 layering order.
+
+## Build stages (book's own priority order — each runs end-to-end before the next starts)
+1. Base logic — grid, movement, barriers, capture, scoring. No networking. *(done)*
+2. MCP infra — FastMCP server/client on localhost, no strategy yet. *(done)*
+3. Blind strategy — heuristic move-decision (Manhattan distance), still no language/scent.
+   *(done)*
+4. Language + scent — pheromone math, free-text hints, LLM plugged in for banter text only.
+   *(done)*
+5. Cloud exposure + tunneling — ngrok, environment separation. *(done)*
+6. **Security** — Commit-Reveal, Nonce, Step-0 hardware declaration, pre-game SHA-256
+   handshake. *(current)*
+7. Reporting shell — Gmail OAuth2 + Gatekeeper, Live GUI, Replay Viewer.
+
+## Stage 5 — what was built
+- `mcp/tunnel.py` — `NgrokTunnel`: wraps a local `ngrok http <port>` process, `start()`
+  returns the public `https://` URL read from ngrok's local API, `stop()` terminates it.
+  Fully unit-testable via injected `launch`/`fetch_json` callables — no real process or
+  network call in the test suite.
+- `cli.py tunnel` — new subcommand: starts the tunnel, prints the public MCP URL to hand to
+  an opponent team, blocks until Ctrl+C.
+- **Deliberately not run live this session** — see `docs/PRD_cloud_tunnel.md`'s design
+  decision: exposing a real public port needs installing `ngrok` and creating an account, so
+  per an explicit check-in with the user, that step is hers to run when actually ready for a
+  match (same "walk me through it live" pattern already agreed for stage 7's Gmail OAuth).
+
+Still no barrier-placement decisions, no crypto, no real LLM providers, no live public
+exposure yet — per the book's layering order and the design decision above.
 
 ## Open items / flags (tracked, not silently decided)
 - **`num_games` figure**: the reference repo's README states "the guidelines book mandates

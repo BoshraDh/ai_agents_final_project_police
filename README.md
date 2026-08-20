@@ -11,14 +11,15 @@ conflicts with the book, the book wins.
 **Team code:** `bb-ai-12`
 
 ## Status
-🚧 **Stage 4 of 7 complete** (base logic + MCP infra + blind strategy + language/scent). See
-`docs/PLAN.md` for the full build-stage roadmap and `docs/TODO.md` for exactly what's next.
+🚧 **Stage 5 of 7 complete** (base logic + MCP infra + blind strategy + language/scent +
+cloud tunneling). See `docs/PLAN.md` for the full build-stage roadmap and `docs/TODO.md` for
+exactly what's next.
 
-## Quick start
+## Quick start (localhost — development and smoke testing)
 
 ```bash
 uv sync
-uv run pytest -q --cov=src --cov-report=term-missing   # 57 tests, 95% coverage
+uv run pytest -q --cov=src --cov-report=term-missing   # 61 tests, 92% coverage
 uv run ruff check .                                      # zero violations
 uv run bb-ai-12-police check-config                       # sanity-check config loading
 ```
@@ -33,6 +34,21 @@ stage-2 STAY stub with a placeholder hint until the synchronized turn-taking pro
 uv run bb-ai-12-police peer --turns 3
 ```
 
+## Real match (public tunnel — a different environment from localhost)
+
+To let an opponent team on another machine reach this peer, install
+[ngrok](https://ngrok.com/download) and run `ngrok config add-authtoken <token>` once (from
+your free ngrok dashboard), then:
+
+```bash
+uv run bb-ai-12-police tunnel
+```
+
+This prints a public `https://.../mcp` URL — send it to your opponent team as their
+`opponent_url`. **Not run automatically by anything in this repo or its tests** — opening a
+public port is a live action only the person running a real match should trigger; see
+`docs/PRD_cloud_tunnel.md` for why.
+
 ## Architecture
 See `docs/PLAN.md` for the full target architecture diagram and the 7-stage build order
 (book §10.3). In short: `SimulationSdk` → `PeerRuntime` (negotiate → turn loop → audit) →
@@ -45,7 +61,7 @@ artifacts) + `infra`/`shared` (MCP transport, config, rate limiting).
 - `docs/PLAN.md` — architecture and build-stage plan.
 - `docs/TODO.md` — live task list, updated every change.
 - `docs/PRD_base_logic.md` / `docs/PRD_mcp_infra.md` / `docs/PRD_strategy.md` /
-  `docs/PRD_language_scent.md` — per-stage detail (stages 1-4).
+  `docs/PRD_language_scent.md` / `docs/PRD_cloud_tunnel.md` — per-stage detail (stages 1-5).
 
 ## Academic report
 The full 6-section academic report (rules model, communication approach, decision-making,

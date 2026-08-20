@@ -49,15 +49,29 @@
 - [x] 57 tests, 95% coverage, ruff-clean.
 - [x] Updated this file, PLAN.md, PRD.md, PRD_language_scent.md, README.md.
 
-## Next (Stage 5 — Cloud exposure + tunneling)
-- [ ] Pick and document a tunneling tool (ngrok or Localtonet) for exposing `my_port`
-      publicly so a real opponent team (not just localhost) can reach this peer.
-- [ ] `mcp/tunnel.py` — thin wrapper that starts/stops the tunnel and reports the public URL.
-- [ ] Document the environment separation between "localhost smoke test" (current `peer`
-      subcommand) and "real match over a public tunnel" in README.md.
-- [ ] Update `config/game.toml`'s `opponent_url` handling to accept a tunnel URL, not just
-      `127.0.0.1`.
-- [ ] Update this file, PLAN.md, PRD.md again once stage 5 is committed.
+## Done (Stage 5 — Cloud exposure + tunneling)
+- [x] Picked ngrok (documented one-time setup in `docs/PRD_cloud_tunnel.md`).
+- [x] `mcp/tunnel.py` — `NgrokTunnel`, starts/stops the tunnel and reports the public URL.
+- [x] `cli.py tunnel` subcommand — prints the public MCP URL, blocks until Ctrl+C.
+- [x] Documented the environment separation between "localhost smoke test" (`peer`) and "real
+      match over a public tunnel" (`tunnel`) in README.md.
+- [x] 61 tests, 92% coverage, ruff-clean.
+- [x] Updated this file, PLAN.md, PRD.md, PRD_cloud_tunnel.md, README.md.
+- [x] **Explicitly did not run a live tunnel** — per a check-in with the user, that's her own
+      action on match day (installing ngrok, creating an account, opening a public port are
+      out of scope for this session to do unattended). See `docs/PRD_cloud_tunnel.md`.
+
+## Next (Stage 6 — Security)
+- [ ] `crypto/commit_reveal.py` — canonical-JSON SHA-256 commit/verify, nonce via
+      `secrets.token_hex`, per the book's 4-step Commit→Acknowledge→Reveal→Audit protocol.
+- [ ] `crypto/step0.py` — signed hardware/software declaration.
+- [ ] `domain/negotiation.py` + `peer/handshake.py` — pre-game agreement handshake, including
+      the SHA-256 verification of `config/game.json` between both peers.
+- [ ] `peer/turn_handler.py` — the real synchronized turn-taking protocol this repo has
+      deferred since stage 3 (see `docs/PRD_strategy.md`'s design-decision note); re-check the
+      book's exact negotiation-protocol text before designing it.
+- [ ] Once the audit layer exists, revisit deceptive hints (deferred since stage 4).
+- [ ] Update this file, PLAN.md, PRD.md again once stage 6 is committed.
 
 ## Open flags (not blocking, must resolve before a real submission-counted match)
 - [ ] **`num_games`** — confirm against the book text whether the mandated per-series value
@@ -66,23 +80,20 @@
 - [ ] Replace `agreed_between: ["bb-ai-12", "<opponent-team-code>"]` with the real opponent
       code once a match is negotiated (both repos, kept byte-identical).
 - [ ] Replace `[game].members` placeholder student IDs in `config/game.toml`.
-- [ ] **Synchronized turn-taking / negotiation handshake** — `mcp/server.py`'s inbound
-      `receive_move` still always echoes STAY (unchanged since stage 2); only this peer's
-      outbound moves use the real brain. Making the inbound side reply with a real move needs
-      a proper `peer/turn_handler.py` + `peer/handshake.py` + `domain/negotiation.py` protocol,
-      deliberately not improvised in stage 3 — see `docs/PRD_strategy.md`'s design-decision
-      note. Build alongside stage 5/6's cloud + security work, re-checking the book's
-      negotiation-protocol text first.
+- [ ] **Synchronized turn-taking / negotiation handshake** — now actively scheduled for stage
+      6 (see "Next" above); `mcp/server.py`'s inbound `receive_move` still always echoes STAY
+      until it lands.
 - [ ] **Barrier placement** — `PoliceBrain` only ever chooses a movement direction; it doesn't
       yet decide when/where to place a barrier, and the wire protocol doesn't carry barrier
-      messages. Add once the message schema is extended (likely alongside the stage above).
+      messages. Add once the message schema is extended (likely alongside stage 6).
 - [ ] **Pheromone spatial spread** — re-confirm the book's exact spatial falloff shape for
       `pheromone_grid_size` (uniform vs. weighted neighborhood deposit) before implementing
       anything beyond the current single-cell deposit in `domain/pheromones.py`.
+- [ ] **Live ngrok tunnel** — `mcp/tunnel.py` is built and unit-tested but never run live this
+      session (see `docs/PRD_cloud_tunnel.md`); the user runs `bb-ai-12-police tunnel` herself
+      once ngrok is installed and she's ready for a real match.
 
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
-- [ ] Stage 5 — Cloud exposure + tunneling (ngrok/Localtonet).
-- [ ] Stage 6 — Security (commit-reveal, nonce, Step-0 declaration, SHA-256 handshake).
 - [ ] Stage 7 — Reporting shell (Gmail OAuth2, Gatekeeper, Live GUI, Replay Viewer).
 - [ ] At least 2 full games played against a real opponent team before submission
       (`min_games_to_pass = 2`).
