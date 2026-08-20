@@ -226,7 +226,7 @@ re-read the relevant chapters directly instead of leaving these as open guesses:
 - [x] 127 tests, 93% coverage, ruff-clean (no test file changes needed — this is a thin,
       CLI-layer timing fix with no new branching logic to unit test beyond what coverage
       already exercises indirectly).
-- [x] Not a mathematically airtight fix (a sufeciently slow opponent could still in theory miss
+- [x] Not a mathematically airtight fix (a sufficiently slow opponent could still in theory miss
       a 3-second window), but reduces the failure window from "always, if timing is close" to
       "a multi-second grace period," which matched the "fix it if it's easy" ask — a fully
       deterministic fix (e.g. an explicit final handshake before either side may exit) is a
