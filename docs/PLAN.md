@@ -257,9 +257,16 @@ for that round, instead of failing immediately if it hasn't yet. Re-ran the exac
 two-process verification that surfaced the bug: 40-turn run, real bidirectional exchange every
 round from turn 1 through turn 35 (previously died on round 1 both attempts), clean automatic
 `GAME OVER: survived` detection on the police side, no stray processes left on the ports
-afterward. 127 tests, 93% coverage, ruff-clean. See `docs/TODO.md` for full detail, including
-the separate, already-documented, lower-severity "benign teardown race" this run's thief-side
-exit encountered (unrelated pre-existing issue, not re-flagged as a new blocker).
+afterward. 127 tests, 93% coverage, ruff-clean. That same run's thief-side exit hit a separate,
+already-documented, lower-severity "benign teardown race" — also fixed the same day, see
+immediately below.
+
+## Benign teardown race — fixed 2026-08-20
+`cli/peer.py` now sleeps `_SHUTDOWN_GRACE_SEC = 3.0` seconds before exiting once
+`runtime.outcome` leaves `ONGOING`, keeping this peer's server alive long enough for the
+opponent's straggling final-round call to land instead of hitting a torn-down connection.
+Re-ran the two-process verification again: both processes now exit with code 0 and zero
+errors, both independently printing `GAME OVER: survived`. See `docs/TODO.md` for full detail.
 
 ## Open items / flags (tracked, not silently decided)
 - `agreed_between` in `config/game.json` currently lists `"<opponent-team-code>"` as a

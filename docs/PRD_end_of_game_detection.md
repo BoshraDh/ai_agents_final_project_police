@@ -83,11 +83,9 @@ peer's own reveal is locally ready instead of failing immediately. See `docs/TOD
 - The `send-report` CLI command itself (build the four JSON artifacts and email them
   automatically once `PeerRuntime.outcome` leaves `ONGOING`) — this feature only makes that
   meaningful to build; it isn't built yet.
-- The pre-existing, lower-severity "benign teardown race" (documented since stage 2): the
-  side that reaches `GAME OVER` first exits immediately with no grace period, so the other
-  side's in-flight final-round call can occasionally fail after that server has torn down.
-  Not the round-1 bug above (which is fixed); both sides still reach the identical outcome
-  independently before this can happen.
+- ~~The pre-existing "benign teardown race"~~ — also fixed same day: `cli/peer.py` now
+  waits `_SHUTDOWN_GRACE_SEC` before exiting once the outcome leaves `ONGOING`. See
+  `docs/TODO.md`'s "Done (benign teardown race — fixed, 2026-08-20)" entry.
 - Everything already deferred from the turn-protocol stage (barrier placement, deceptive
   hints, real negotiation handshake, mutual end-of-game audit exchange, pheromone spatial
   spread, live ngrok tunnel).

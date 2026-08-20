@@ -208,15 +208,29 @@ re-read the relevant chapters directly instead of leaving these as open guesses:
       from turn 1 through turn 35 (previously died on round 1, 2/2 attempts), police correctly
       auto-detected `GAME OVER: survived — scores {'police': 5, 'thief': 10}` at turn 35 and
       exited cleanly (exit 0). No stray processes left bound to ports 8801/8802 afterward.
-- [x] **Thief's process exited with an error at turn 35** — but this is the *different*,
-      already-documented "benign teardown race" (since stage 2: "the shorter-running side's
-      script exits mid-flight"), not the round-1 bug: police's process exits immediately after
-      printing `GAME OVER` (no grace period), so thief's own in-flight final-round outbound
-      call can land after police's server has already torn down. Both sides had already
-      independently reached the identical `survived` conclusion from turn 34's data by that
-      point, so this is a clean-exit-timing rough edge, not a correctness or outcome-detection
-      problem. Left as-is, consistent with how the same class of teardown race was already
-      accepted at every prior stage; not re-flagged as a new blocker.
+- [x] **Thief's process exited with an error at turn 35** — the *different*, already-documented
+      "benign teardown race" (since stage 2: "the shorter-running side's script exits
+      mid-flight"), not the round-1 bug: whichever side reaches `GAME OVER` first was exiting
+      immediately with no grace period, so the other side's in-flight final-round outbound call
+      could land after that server had already torn down. **Also fixed, same day** — see below.
+
+## Done (benign teardown race — fixed, 2026-08-20)
+- [x] `cli/peer.py` — after `run_turn_loop` returns, if `runtime.outcome` is no longer
+      `ONGOING` the process now sleeps `_SHUTDOWN_GRACE_SEC = 3.0` seconds before exiting,
+      keeping this peer's (daemon-thread) server alive long enough for the opponent's
+      straggling final-round call to land, instead of exiting the instant the local loop ends.
+- [x] Re-ran the live two-process verification once more: both `bb-ai-12-police peer --turns
+      40` and `bb-ai-12-thief peer --turns 40` now exit with code 0 and zero errors in either
+      log — both sides independently printed `GAME OVER: survived — scores {'police': 5,
+      'thief': 10}` at turn 35. No stray processes left on ports 8801/8802 afterward.
+- [x] 127 tests, 93% coverage, ruff-clean (no test file changes needed — this is a thin,
+      CLI-layer timing fix with no new branching logic to unit test beyond what coverage
+      already exercises indirectly).
+- [x] Not a mathematically airtight fix (a sufeciently slow opponent could still in theory miss
+      a 3-second window), but reduces the failure window from "always, if timing is close" to
+      "a multi-second grace period," which matched the "fix it if it's easy" ask — a fully
+      deterministic fix (e.g. an explicit final handshake before either side may exit) is a
+      larger protocol change, not pursued here.
 
 ## Open flags (not blocking, must resolve before a real submission-counted match)
 - [ ] **Step-0 "signing" key** — book ch.5.5 mentions signing with "a key supplied in
