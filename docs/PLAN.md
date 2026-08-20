@@ -34,10 +34,10 @@ police=8802). `config/game.json` in both repos must stay byte-identical (verifie
 SHA-256 in the pre-game handshake, stage 6).
 
 ## Build stages (book's own priority order — each runs end-to-end before the next starts)
-1. **Base logic** — grid, movement, barriers, capture, scoring. No networking. *(current)*
-2. MCP infra — FastMCP server/client on localhost, no strategy yet.
-3. Blind strategy — heuristic move-decision (Manhattan + Bayesian belief), still no
-   language/scent.
+1. Base logic — grid, movement, barriers, capture, scoring. No networking. *(done)*
+2. MCP infra — FastMCP server/client on localhost, no strategy yet. *(done)*
+3. **Blind strategy** — heuristic move-decision (Manhattan + Bayesian belief), still no
+   language/scent. *(current)*
 4. Language + scent — pheromone math, free-text hints, LLM plugged in for banter text only.
 5. Cloud exposure + tunneling — ngrok/Localtonet, environment separation.
 6. Security — Commit-Reveal, Nonce, Step-0 hardware declaration, pre-game SHA-256 handshake.
@@ -60,6 +60,21 @@ SHA-256 in the pre-game handshake, stage 6).
 
 No networking, no crypto, no LLM yet — deliberately, per the book's own warning against
 skipping layers.
+
+## Stage 2 — what was built
+- `mcp/server.py` — `FastMCP(name="bb-ai-12-police")` with a `receive_move` tool; stage-2 stub
+  always replies STAY. `run_server(host, port)` serves streamable HTTP at `/mcp`.
+- `mcp/client.py` — `McpTransport` wraps `fastmcp.Client`; `send_move`/`send_move_async` call
+  the opponent's `receive_move` tool.
+- `runtime/peer_runtime.py` — `PeerRuntime`: starts the server in a background thread, then
+  `run_turn_loop(turns)` sends hardcoded STAY moves and prints each reply.
+- `cli.py peer --turns N` — manual smoke-test subcommand.
+- **Manually verified real round trip** between this repo and the thief repo, each running as
+  its own process on localhost (ports 8802/8801) — see `docs/PRD_mcp_infra.md` for the exact
+  transcript and the known benign teardown-race caveat (fixed properly by stage 3's real
+  turn-taking protocol, not patched here).
+
+Still no strategy (hardcoded STAY), no crypto, no LLM — per the book's layering order.
 
 ## Open items / flags (tracked, not silently decided)
 - **`num_games` figure**: the reference repo's README states "the guidelines book mandates

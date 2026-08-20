@@ -9,15 +9,27 @@
 - [x] `docs/PRD.md`, `docs/PLAN.md`, `docs/PRD_base_logic.md`, this file.
 - [x] `.gitignore`, `.env-example`, `LICENSE`, `README.md` skeleton.
 
-## Next (Stage 2 — MCP infra)
-- [ ] Add `fastmcp` dependency (`uv add fastmcp`).
-- [ ] `mcp/server.py` — FastMCP server exposing a `receive_move` tool on `my_port` (8802).
-- [ ] `mcp/client.py` (`McpTransport`) — calls the opponent's `opponent_url`.
-- [ ] `runtime/peer_runtime.py` — turn loop skeleton (no strategy/crypto yet — hardcode a
-      trivial always-STAY move to prove the wire works end-to-end).
-- [ ] Manual test: run this repo + the thief repo in two terminals on localhost, confirm a
-      move round-trips both ways.
-- [ ] Update this file, PLAN.md, PRD.md again once stage 2 is committed.
+## Done (Stage 2 — MCP infra)
+- [x] Added `fastmcp`+`httpx` dependencies (`uv add fastmcp httpx`).
+- [x] `mcp/server.py` — FastMCP server exposing a `receive_move` tool on `my_port` (8802).
+- [x] `mcp/client.py` (`McpTransport`) — calls the opponent's `opponent_url`.
+- [x] `runtime/peer_runtime.py` — turn loop skeleton (hardcoded always-STAY move).
+- [x] `cli.py peer --turns N` subcommand for manual smoke testing.
+- [x] Manual test: ran this repo + the thief repo concurrently on localhost — real
+      bidirectional round trip confirmed (see `docs/PRD_mcp_infra.md` for the exact result).
+- [x] 37 tests, 93% coverage, ruff-clean.
+- [x] Updated this file, PLAN.md, PRD.md, PRD_mcp_infra.md, README.md.
+
+## Next (Stage 3 — Blind strategy)
+- [ ] `strategy/base.py` — `BrainBase` contract (`decide_move`).
+- [ ] `strategy/heuristic_brain.py` — Manhattan distance + Bayesian belief over the opponent's
+      last-known/inferred position (default, zero LLM tokens).
+- [ ] `strategy/police_brain.py` — police-specific subclass (barrier-aware pursuit).
+- [ ] `strategy/resolve_brain.py` — factory reading `[strategy]` from `config/game.toml`.
+- [ ] Replace `PeerRuntime._decide_move`'s hardcoded STAY with the resolved brain's output.
+- [ ] Real synchronized turn-taking (negotiation handshake) to replace the ad-hoc two-script
+      smoke test from stage 2.
+- [ ] Update this file, PLAN.md, PRD.md again once stage 3 is committed.
 
 ## Open flags (not blocking, must resolve before a real submission-counted match)
 - [ ] **`num_games`** — confirm against the book text whether the mandated per-series value

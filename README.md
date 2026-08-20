@@ -11,21 +11,24 @@ conflicts with the book, the book wins.
 **Team code:** `bb-ai-12`
 
 ## Status
-🚧 **Stage 1 of 7 complete** (base logic). See `docs/PLAN.md` for the full build-stage
-roadmap and `docs/TODO.md` for exactly what's next.
+🚧 **Stage 2 of 7 complete** (base logic + MCP infra). See `docs/PLAN.md` for the full
+build-stage roadmap and `docs/TODO.md` for exactly what's next.
 
-## Quick start (current stage — no networking yet)
+## Quick start
 
 ```bash
 uv sync
-uv run pytest -q --cov=src --cov-report=term-missing   # 31 tests, 97% coverage
+uv run pytest -q --cov=src --cov-report=term-missing   # 37 tests, 93% coverage
 uv run ruff check .                                      # zero violations
-uv run python -m bb_ai_12_police check-config             # sanity-check config loading
+uv run bb-ai-12-police check-config                       # sanity-check config loading
 ```
 
-Once stage 2 (MCP networking) lands, this section will be replaced with the real two-terminal
-`peer --role police` / `peer --role thief` instructions, matching the reference simulator's
-operational pattern.
+Two-terminal round-trip smoke test (run the thief repo's equivalent command first in its own
+terminal, then this one — every move is still a hardcoded STAY; stage 3 adds real strategy):
+
+```bash
+uv run bb-ai-12-police peer --turns 3
+```
 
 ## Architecture
 See `docs/PLAN.md` for the full target architecture diagram and the 7-stage build order
