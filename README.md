@@ -11,20 +11,22 @@ conflicts with the book, the book wins.
 **Team code:** `bb-ai-12`
 
 ## Status
-🚧 **Stage 2 of 7 complete** (base logic + MCP infra). See `docs/PLAN.md` for the full
-build-stage roadmap and `docs/TODO.md` for exactly what's next.
+🚧 **Stage 3 of 7 complete** (base logic + MCP infra + blind strategy). See `docs/PLAN.md`
+for the full build-stage roadmap and `docs/TODO.md` for exactly what's next.
 
 ## Quick start
 
 ```bash
 uv sync
-uv run pytest -q --cov=src --cov-report=term-missing   # 37 tests, 93% coverage
+uv run pytest -q --cov=src --cov-report=term-missing   # 46 tests, 94% coverage
 uv run ruff check .                                      # zero violations
 uv run bb-ai-12-police check-config                       # sanity-check config loading
 ```
 
 Two-terminal round-trip smoke test (run the thief repo's equivalent command first in its own
-terminal, then this one — every move is still a hardcoded STAY; stage 3 adds real strategy):
+terminal, then this one). This peer's outbound moves are now real Manhattan-distance pursuit
+decisions; the inbound reply is still a stage-2 STAY stub until the synchronized turn-taking
+protocol lands (see `docs/PRD_strategy.md`):
 
 ```bash
 uv run bb-ai-12-police peer --turns 3
@@ -41,7 +43,8 @@ artifacts) + `infra`/`shared` (MCP transport, config, rate limiting).
 - `docs/PRD.md` — functional & non-functional requirements.
 - `docs/PLAN.md` — architecture and build-stage plan.
 - `docs/TODO.md` — live task list, updated every change.
-- `docs/PRD_base_logic.md` — stage-specific detail for the current stage.
+- `docs/PRD_base_logic.md` / `docs/PRD_mcp_infra.md` / `docs/PRD_strategy.md` — per-stage
+  detail (stages 1-3).
 
 ## Academic report
 The full 6-section academic report (rules model, communication approach, decision-making,

@@ -33,16 +33,6 @@ structurally identical skeleton, opposite role's brain, mirrored ports (thief=88
 police=8802). `config/game.json` in both repos must stay byte-identical (verified via
 SHA-256 in the pre-game handshake, stage 6).
 
-## Build stages (book's own priority order — each runs end-to-end before the next starts)
-1. Base logic — grid, movement, barriers, capture, scoring. No networking. *(done)*
-2. MCP infra — FastMCP server/client on localhost, no strategy yet. *(done)*
-3. **Blind strategy** — heuristic move-decision (Manhattan + Bayesian belief), still no
-   language/scent. *(current)*
-4. Language + scent — pheromone math, free-text hints, LLM plugged in for banter text only.
-5. Cloud exposure + tunneling — ngrok/Localtonet, environment separation.
-6. Security — Commit-Reveal, Nonce, Step-0 hardware declaration, pre-game SHA-256 handshake.
-7. Reporting shell — Gmail OAuth2 + Gatekeeper, Live GUI, Replay Viewer.
-
 ## Stage 1 — what was built
 - `domain/protocol.py` — `Role`, `Direction`, `Position`, `GameOutcome`, `MoveAction` (shared
   value types, stdlib-only).
@@ -71,10 +61,42 @@ skipping layers.
 - `cli.py peer --turns N` — manual smoke-test subcommand.
 - **Manually verified real round trip** between this repo and the thief repo, each running as
   its own process on localhost (ports 8802/8801) — see `docs/PRD_mcp_infra.md` for the exact
-  transcript and the known benign teardown-race caveat (fixed properly by stage 3's real
-  turn-taking protocol, not patched here).
+  transcript and the known benign teardown-race caveat (fixed properly once the real
+  synchronized turn-taking protocol lands — see the Stage 3 note below — not patched here).
 
 Still no strategy (hardcoded STAY), no crypto, no LLM — per the book's layering order.
+
+## Build stages (book's own priority order — each runs end-to-end before the next starts)
+1. Base logic — grid, movement, barriers, capture, scoring. No networking. *(done)*
+2. MCP infra — FastMCP server/client on localhost, no strategy yet. *(done)*
+3. Blind strategy — heuristic move-decision (Manhattan distance), still no language/scent.
+   *(done)*
+4. **Language + scent** — pheromone math, free-text hints, LLM plugged in for banter text
+   only. *(current)*
+5. Cloud exposure + tunneling — ngrok/Localtonet, environment separation.
+6. Security — Commit-Reveal, Nonce, Step-0 hardware declaration, pre-game SHA-256 handshake.
+7. Reporting shell — Gmail OAuth2 + Gatekeeper, Live GUI, Replay Viewer.
+
+## Stage 3 — what was built
+- `domain/belief.py` — `BeliefState`: exact position tracker, replayed from public start
+  positions + honestly-relayed moves (deterministic until stage 4's deception/stage 6's
+  crypto make it genuinely uncertain).
+- `strategy/base.py` — `BrainBase` abstract contract (`decide_move`); LLM never decides.
+- `strategy/heuristic_brain.py` — `HeuristicBrain` + `manhattan()`: Manhattan-distance search
+  over `domain.rules.legal_moves`, `_sign` toggles pursue vs evade.
+- `strategy/police_brain.py` — `PoliceBrain(HeuristicBrain)`, `_sign=1` (chases the thief).
+- `strategy/resolve_brain.py` — factory reading `[strategy].police_class` from
+  `config/game.toml`, defaulting to `PoliceBrain`; `game.toml`'s `[strategy]` is now live.
+- `runtime/peer_runtime.py` — `_decide_move` calls the resolved brain; `run_turn_loop` updates
+  `BeliefState` on both the move sent and the move received.
+- **Manually verified with real strategy on both sides**: this repo's outbound moves are now
+  genuine pursuit decisions, not hardcoded STAY — see `docs/PRD_strategy.md` for the exact
+  transcript. `mcp/server.py`'s inbound stub deliberately stays STAY-only for now (see the
+  design-decision note in `docs/PRD_strategy.md` on why synchronized turn-taking is deferred,
+  not built ad hoc, to a later stage rather than guessed at here).
+
+Still no barrier-placement decisions, no scent/hints, no crypto, no LLM — per the book's
+layering order.
 
 ## Open items / flags (tracked, not silently decided)
 - **`num_games` figure**: the reference repo's README states "the guidelines book mandates
