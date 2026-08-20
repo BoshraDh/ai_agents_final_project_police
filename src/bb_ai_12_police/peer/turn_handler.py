@@ -16,6 +16,7 @@ Final nonce disclosure (for the end-of-game mutual audit) is handled by
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 
 
@@ -42,6 +43,26 @@ class TurnHandler:
     def own_reveal(self, turn: int) -> Reveal:
         if turn not in self._own_reveals:
             raise ValueError(f"no own reveal prepared for round {turn} yet")
+        return self._own_reveals[turn]
+
+    def wait_for_own_reveal(
+        self, turn: int, timeout_sec: float, poll_interval_sec: float = 0.02
+    ) -> Reveal:
+        """Blocks until this peer has locally prepared its round-`turn` reveal.
+
+        The book's Acknowledge step exists to "ensure reveal only after both
+        sides have committed" (ch.5.3); two independently-started processes
+        have no other shared clock to enforce that with, so instead of
+        answering an inbound reveal request immediately (and possibly before
+        this peer has even decided its own move for the round), the
+        responder waits for its own local preparation to catch up — turning
+        the round into an implicit rendezvous rather than a race.
+        """
+        deadline = time.monotonic() + timeout_sec
+        while turn not in self._own_reveals:
+            if time.monotonic() >= deadline:
+                raise TimeoutError(f"timed out waiting to prepare own reveal for round {turn}")
+            time.sleep(poll_interval_sec)
         return self._own_reveals[turn]
 
     def receive_commit(self, turn: int, h_commit: str) -> None:

@@ -36,6 +36,7 @@ def _runtime(
         server_name="bb-ai-12-police",
         role=Role.POLICE,
         survival_threshold=survival_threshold,
+        reveal_wait_timeout_sec=5.0,
         board=Board(size=7),
         barriers=BarrierSet(max_barriers=14),
         belief=BeliefState(own_position=own_position, opponent_position=opponent_position),

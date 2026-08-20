@@ -45,6 +45,7 @@ class PeerRuntime:
         server_name: str,
         role: Role,
         survival_threshold: int,
+        reveal_wait_timeout_sec: float,
         board: Board,
         barriers: BarrierSet,
         belief: BeliefState,
@@ -59,6 +60,7 @@ class PeerRuntime:
         self.server_name = server_name
         self.role = role
         self.survival_threshold = survival_threshold
+        self.reveal_wait_timeout_sec = reveal_wait_timeout_sec
         self.transport = McpTransport(opponent_url)
         self.board = board
         self.barriers = barriers
@@ -74,7 +76,7 @@ class PeerRuntime:
 
     def start_server(self, startup_delay_sec: float = 1.0) -> None:
         """Bind this peer's inbound MCP server in a background thread."""
-        mcp = build_server(self.server_name, self.turn_handler)
+        mcp = build_server(self.server_name, self.turn_handler, self.reveal_wait_timeout_sec)
         thread = threading.Thread(
             target=run_server, args=(mcp, self.host, self.port), daemon=True
         )

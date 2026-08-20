@@ -88,5 +88,17 @@ instead of guessing.
   yet).
 - A real negotiation handshake beyond the config-agreement check (game_id assignment, etc.).
 - Live ngrok tunnel — the user's own action on match day.
-- Game-completion detection (the loop still runs exactly `--turns N`, not until
-  capture/survival).
+- ~~Game-completion detection~~ — done, see `docs/PRD_end_of_game_detection.md`.
+
+## Update — 2026-08-20: round-1 race fixed
+Live verification for the end-of-game-detection feature surfaced a real, 100%-reproducible bug
+in this protocol: two freshly-started, independent peer processes reliably failed on round 1,
+because the Acknowledge guarantee described above ("prevents backing out, ensures reveal only
+after BOTH sides committed") was never actually enforced in code — `submit_reveal` answered
+immediately, which only worked if the opponent happened to have already raced ahead to prepare
+its own reveal locally first. Fixed via `TurnHandler.wait_for_own_reveal(turn, timeout_sec)`:
+an inbound `submit_reveal` now blocks (bounded, polling) until this peer's own reveal for that
+round is locally ready, instead of failing immediately — turning the race into an implicit
+rendezvous. Re-ran the exact live two-process run that surfaced the bug: real bidirectional
+exchange every round from turn 1 through turn 35 (previously died on round 1). See
+`docs/TODO.md`'s "Done (commit-reveal round-1 race — fixed, 2026-08-20)" entry for full detail.

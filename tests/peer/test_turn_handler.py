@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import threading
+import time
+
 import pytest
 
 from bb_ai_12_police.peer.turn_handler import TurnHandler
@@ -47,3 +50,27 @@ def test_receive_reveal_without_a_prior_commit_raises():
 def test_opponent_reveal_is_none_before_it_arrives():
     handler = TurnHandler()
     assert handler.opponent_reveal(1) is None
+
+
+def test_wait_for_own_reveal_returns_immediately_if_already_prepared():
+    handler = TurnHandler()
+    handler.prepare_own_reveal(1, "N", "hi", "truth")
+    assert handler.wait_for_own_reveal(1, timeout_sec=1.0).move == "N"
+
+
+def test_wait_for_own_reveal_blocks_until_another_thread_prepares_it():
+    handler = TurnHandler()
+
+    def prepare_soon():
+        time.sleep(0.05)
+        handler.prepare_own_reveal(1, "E", "gotcha", "truth")
+
+    threading.Thread(target=prepare_soon).start()
+    reveal = handler.wait_for_own_reveal(1, timeout_sec=1.0, poll_interval_sec=0.01)
+    assert reveal.move == "E"
+
+
+def test_wait_for_own_reveal_times_out_if_never_prepared():
+    handler = TurnHandler()
+    with pytest.raises(TimeoutError, match="timed out"):
+        handler.wait_for_own_reveal(1, timeout_sec=0.05, poll_interval_sec=0.01)

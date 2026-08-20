@@ -62,28 +62,32 @@ layer's role-neutral `(cop_pos, thief_pos)` argument order that `outcome_after_s
       stubbed transport — the same code path a real run would take, minus the live networking
       layer where the blocking bug actually lives.
 
-## A real bug found while attempting live verification (not fixed here — see `docs/TODO.md`)
+## A real bug found while attempting live verification (fixed same day — see `docs/TODO.md`)
 Two independent, freshly-started `peer` processes (as a real match against another team
 necessarily involves — no shared start signal between two different teams' machines) reliably
-fail on round 1: whichever peer's `send_reveal` call reaches the opponent's `submit_reveal`
-handler before that opponent has locally finished its own `TurnHandler.prepare_own_reveal` for
-the same round gets a hard `ValueError`, crashing that side. Root cause: the book's protocol
+failed on round 1: whichever peer's `send_reveal` call reached the opponent's `submit_reveal`
+handler before that opponent had locally finished its own `TurnHandler.prepare_own_reveal` for
+the same round got a hard `ValueError`, crashing that side. Root cause: the book's protocol
 calls for an **Acknowledge** step that should "ensure reveal only after both sides have
-committed" — this repo's wire protocol never actually waits for that; each side sends its
-commit and immediately calls the opponent's `submit_reveal`, which only succeeds if the
-opponent happens to have already raced ahead locally. This is pre-existing in the turn
+committed" — this repo's wire protocol never actually waited for that; each side sent its
+commit and immediately called the opponent's `submit_reveal`, which only succeeded if the
+opponent happened to have already raced ahead locally. This was pre-existing in the turn
 protocol built in the previous stage (`docs/PRD_turn_protocol.md`), not something this
-feature introduced, and reproduced 100% of the time across 2 separate attempts this session
-(different process-start staggering both times). Flagged as a new, high-priority, hard-blocker
-open item in `docs/TODO.md` rather than fixed in this pass — the fix is a real wire-protocol
-change (an explicit synchronization point before either side can reveal), out of scope for an
-end-of-game-detection change.
+feature introduced, and reproduced 100% of the time across 2 separate attempts. **Fixed the
+same day**: `TurnHandler.wait_for_own_reveal` makes an inbound `submit_reveal` block until this
+peer's own reveal is locally ready instead of failing immediately. See `docs/TODO.md`'s "Done
+(commit-reveal round-1 race — fixed, 2026-08-20)" entry and `docs/PRD_turn_protocol.md`'s
+"Update — 2026-08-20" section for full detail, including the re-run live verification.
 
 ## Explicitly still deferred
 - The `send-report` CLI command itself (build the four JSON artifacts and email them
   automatically once `PeerRuntime.outcome` leaves `ONGOING`) — this feature only makes that
   meaningful to build; it isn't built yet.
-- The round-1 commit-reveal race described above.
+- The pre-existing, lower-severity "benign teardown race" (documented since stage 2): the
+  side that reaches `GAME OVER` first exits immediately with no grace period, so the other
+  side's in-flight final-round call can occasionally fail after that server has torn down.
+  Not the round-1 bug above (which is fixed); both sides still reach the identical outcome
+  independently before this can happen.
 - Everything already deferred from the turn-protocol stage (barrier placement, deceptive
   hints, real negotiation handshake, mutual end-of-game audit exchange, pheromone spatial
   spread, live ngrok tunnel).

@@ -28,6 +28,7 @@ def run(repo_root: str, turns: int) -> int:
         server_name=private["game"]["group_id"],
         role=Role.POLICE,
         survival_threshold=shared["movement_and_barriers"]["survival_threshold"],
+        reveal_wait_timeout_sec=shared["network_and_league"]["response_timeout_sec"],
         board=Board.from_config(shared),
         barriers=BarrierSet.from_config(shared),
         belief=BeliefState.from_config(shared, "cop_start", "thief_start"),

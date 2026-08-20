@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import threading
+import time
 
 import pytest
 
@@ -43,4 +45,29 @@ def test_submit_reveal_raises_without_a_prior_commit():
     handler = TurnHandler()
     tools = _tools(build_server("test", handler))
     with pytest.raises(ValueError, match="protocol violation"):
+        tools["submit_reveal"]("S", "never", "lie", 1)
+
+
+def test_submit_reveal_waits_for_our_own_reveal_prepared_on_another_thread():
+    # Regression test for the round-1 race: an inbound reveal can arrive
+    # before this peer's own main loop has locally prepared its reveal for
+    # the same round; submit_reveal must wait for it, not fail immediately.
+    handler = TurnHandler()
+    handler.receive_commit(1, "deadbeef")
+    tools = _tools(build_server("test", handler, reveal_wait_timeout_sec=1.0))
+
+    def prepare_soon():
+        time.sleep(0.05)
+        handler.prepare_own_reveal(1, "N", "your move, criminal", "truth")
+
+    threading.Thread(target=prepare_soon).start()
+    reply = tools["submit_reveal"]("S", "never", "lie", 1)
+    assert reply == {"move": "N", "hint": "your move, criminal", "intent": "truth", "turn": 1}
+
+
+def test_submit_reveal_times_out_if_our_own_reveal_never_gets_prepared():
+    handler = TurnHandler()
+    handler.receive_commit(1, "deadbeef")
+    tools = _tools(build_server("test", handler, reveal_wait_timeout_sec=0.05))
+    with pytest.raises(TimeoutError, match="timed out"):
         tools["submit_reveal"]("S", "never", "lie", 1)

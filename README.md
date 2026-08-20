@@ -18,17 +18,16 @@ automatic capture/survival stop). See `docs/PLAN.md` for what was built at each 
 `docs/TODO.md` for the deferred integration work still open before a real submission-counted
 match.
 
-⚠️ **Known hard blocker, flagged not fixed**: two freshly-started, independent peer processes
-reliably fail on round 1 of a real match due to a missing synchronization point in the
-commit-reveal wire protocol (the book's Acknowledge step never actually waits for both sides
-to commit before either reveals). See `docs/TODO.md` for the full root-cause writeup — this
-must be fixed before attempting a real match against another team.
+✅ **Round-1 commit-reveal race fixed**: two freshly-started, independent peer processes
+previously failed on round 1 due to a missing synchronization point in the wire protocol; an
+inbound reveal now waits for this peer's own reveal to be locally ready instead of failing
+immediately. Re-verified with a real 40-turn two-process run — see `docs/TODO.md`.
 
 ## Quick start (localhost — development and smoke testing)
 
 ```bash
 uv sync
-uv run pytest -q --cov=src --cov-report=term-missing   # 122 tests, 93% coverage
+uv run pytest -q --cov=src --cov-report=term-missing   # 127 tests, 93% coverage
 uv run ruff check .                                      # zero violations
 uv run bb-ai-12-police check-config                       # sanity-check config loading
 uv run bb-ai-12-police declare                            # print a sealed Step-0 declaration

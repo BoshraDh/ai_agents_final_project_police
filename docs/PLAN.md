@@ -248,12 +248,20 @@ role-relative `BeliefState` into the rules layer's role-neutral `(cop_pos, thief
   Verification instead relies on the unit-test suite, which directly exercises the same
   early-stop code path via a stubbed transport.
 
+## Commit-reveal round-1 race — fixed 2026-08-20
+The round-1 race flagged immediately above (two freshly-started independent peer processes
+crashing on round 1) is fixed: `TurnHandler.wait_for_own_reveal` makes an inbound
+`submit_reveal` call block (bounded by `reveal_wait_timeout_sec`, sourced from
+`network_and_league.response_timeout_sec`) until this peer has locally prepared its own reveal
+for that round, instead of failing immediately if it hasn't yet. Re-ran the exact live
+two-process verification that surfaced the bug: 40-turn run, real bidirectional exchange every
+round from turn 1 through turn 35 (previously died on round 1 both attempts), clean automatic
+`GAME OVER: survived` detection on the police side, no stray processes left on the ports
+afterward. 127 tests, 93% coverage, ruff-clean. See `docs/TODO.md` for full detail, including
+the separate, already-documented, lower-severity "benign teardown race" this run's thief-side
+exit encountered (unrelated pre-existing issue, not re-flagged as a new blocker).
+
 ## Open items / flags (tracked, not silently decided)
-- **NEW, HIGH PRIORITY — commit-reveal round-1 race (100% reproducible)**: two freshly-started
-  independent peer processes reliably crash on round 1 because the wire protocol never
-  actually waits for both sides to commit before either reveals (the book's Acknowledge step's
-  stated purpose). See `docs/TODO.md` for the full root-cause writeup — this is a hard blocker
-  for any real live match, not fixed in this pass.
 - `agreed_between` in `config/game.json` currently lists `"<opponent-team-code>"` as a
   placeholder — fill in the real opponent code once a match is negotiated, in both repos.
 - `config/game.toml` `[game].members` lists placeholder student IDs — fill in real IDs.

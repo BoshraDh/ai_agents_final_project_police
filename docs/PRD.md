@@ -63,11 +63,13 @@ Gmail sending is built, unit-tested, **and verified with a real send** to
 command that fires automatically off the new outcome-detection is still open); FR-11 (loading
 + a pre-game config-agreement check, no full negotiation handshake yet).
 
-**A hard blocker for any real live match was found and flagged (not yet fixed)**: two
-freshly-started, independent peer processes reliably fail on round 1 due to a missing
-synchronization point in the wire protocol (the book's Acknowledge step never actually waits
-for both sides to commit before either reveals). See `docs/PRD_end_of_game_detection.md` and
-the high-priority open flag in `docs/TODO.md`.
+**The hard blocker found while verifying end-of-game detection is now fixed**: two
+freshly-started, independent peer processes previously failed on round 1 due to a missing
+synchronization point in the wire protocol (the book's Acknowledge step never actually waited
+for both sides to commit before either revealed). `TurnHandler.wait_for_own_reveal` now blocks
+an inbound reveal until this peer's own reveal is locally ready, closing the race. Re-verified
+live: a full 40-turn two-process run now exchanges real commit-reveal rounds continuously and
+the police side auto-detects `GAME OVER` correctly. See `docs/TODO.md` for full detail.
 
 See `docs/PRD_base_logic.md` / `docs/PRD_mcp_infra.md` / `docs/PRD_strategy.md` /
 `docs/PRD_language_scent.md` / `docs/PRD_cloud_tunnel.md` / `docs/PRD_security_crypto.md` /

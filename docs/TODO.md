@@ -180,30 +180,45 @@ re-read the relevant chapters directly instead of leaving these as open guesses:
       feature; pre-existing in the commit-reveal turn protocol since the last stage).
 - [x] Updated this file, PLAN.md, PRD.md, README.md in both repos.
 
+## Done (commit-reveal round-1 race — fixed, 2026-08-20)
+- [x] **Fixed the round-1 race flagged in the previous entry.** Root cause was confirmed: the
+      book's Acknowledge step ("ensure reveal only after BOTH sides have committed") was never
+      actually enforced — `submit_reveal` answered immediately, which only worked if the
+      opponent happened to have already raced ahead to prepare its own reveal locally first.
+- [x] `peer/turn_handler.py` — `TurnHandler.wait_for_own_reveal(turn, timeout_sec,
+      poll_interval_sec=0.02)`: blocks (short polling loop) until this peer has locally
+      prepared its own round-`turn` reveal, raising `TimeoutError` if that never happens within
+      `timeout_sec`. Turns the previous race into an implicit rendezvous: an inbound
+      `submit_reveal` call now waits for this peer to catch up instead of failing immediately.
+- [x] `mcp/server.py` — `build_server` gains `reveal_wait_timeout_sec: float = 30.0`;
+      `submit_reveal` calls `wait_for_own_reveal` instead of the old immediate `own_reveal`
+      lookup. `submit_reveal` still raises immediately (unchanged) if no commit preceded it —
+      that check was never the source of the race.
+- [x] `runtime/peer_runtime.py` — `PeerRuntime` gains `reveal_wait_timeout_sec: float`, passed
+      through to `build_server` in `start_server`.
+- [x] `cli/peer.py` — passes `reveal_wait_timeout_sec=shared["network_and_league"]
+      ["response_timeout_sec"]` (reuses the existing book-mandated config value, `30`, rather
+      than inventing a new constant — NFR-4).
+- [x] 6 new/updated tests (turn_handler: returns-immediately / blocks-until-another-thread /
+      times-out; mcp/server: waits-for-another-thread / times-out) — 127 tests, 93% coverage,
+      ruff-clean.
+- [x] **Re-ran the live two-process verification that originally surfaced the bug — now
+      succeeds.** `bb-ai-12-police peer --turns 40` + `bb-ai-12-thief peer --turns 40`, both
+      started as independent processes: real bidirectional commit-reveal exchange every round
+      from turn 1 through turn 35 (previously died on round 1, 2/2 attempts), police correctly
+      auto-detected `GAME OVER: survived — scores {'police': 5, 'thief': 10}` at turn 35 and
+      exited cleanly (exit 0). No stray processes left bound to ports 8801/8802 afterward.
+- [x] **Thief's process exited with an error at turn 35** — but this is the *different*,
+      already-documented "benign teardown race" (since stage 2: "the shorter-running side's
+      script exits mid-flight"), not the round-1 bug: police's process exits immediately after
+      printing `GAME OVER` (no grace period), so thief's own in-flight final-round outbound
+      call can land after police's server has already torn down. Both sides had already
+      independently reached the identical `survived` conclusion from turn 34's data by that
+      point, so this is a clean-exit-timing rough edge, not a correctness or outcome-detection
+      problem. Left as-is, consistent with how the same class of teardown race was already
+      accepted at every prior stage; not re-flagged as a new blocker.
+
 ## Open flags (not blocking, must resolve before a real submission-counted match)
-- [ ] **NEW, HIGH PRIORITY — commit-reveal round-1 race, 100% reproducible**: a fresh
-      `bb-ai-12-police peer` + `bb-ai-12-thief peer` run, started as two independent processes
-      (as a real match against another team necessarily would be — no shared start signal),
-      fails on round 1 every time this session (2 separate attempts, different startup
-      staggering): whichever peer's outbound `send_reveal` call reaches the opponent's
-      `submit_reveal` handler *before* the opponent's own main-loop thread has locally called
-      `TurnHandler.prepare_own_reveal` for that same round gets `ValueError: no own reveal
-      prepared for round 1 yet` (raised inside `submit_reveal`, surfaced to the caller as a
-      `fastmcp.exceptions.ToolError`), which crashes that side; the other side's next network
-      call then fails too once the first process (and its server) has exited. Root cause: the
-      book's 4-step protocol calls for an explicit **Acknowledge** step whose stated purpose is
-      to "ensure reveal only after BOTH sides have committed" — this implementation never
-      actually waits for that; each peer sends its commit then immediately calls the
-      opponent's `submit_reveal`, which only works if the opponent happens to have already
-      raced ahead to prepare its own reveal locally first. `startup_delay_sec` and process
-      start-time staggering only change the odds, they don't fix the underlying missing
-      synchronization. **Needs a real fix** (e.g. `submit_commit` blocks/queues until both
-      commits are in before any `submit_reveal` can succeed, or an explicit `acknowledge`
-      wire call peers exchange before either reveals) before any live match against another
-      team can be attempted — this is a hard blocker, not a nice-to-have. Not fixed in this
-      pass (out of scope for the end-of-game-detection task that surfaced it); tracked here
-      instead of silently patched. See `docs/PRD_turn_protocol.md` for the original protocol
-      design this bug lives in.
 - [ ] **Step-0 "signing" key** — book ch.5.5 mentions signing with "a key supplied in
       advance"; no such key has been issued/found yet. Revisit if/when one is supplied (e.g.
       in a course announcement or the reference repo's own Step-0 code), and treat the current
