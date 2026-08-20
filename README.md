@@ -23,6 +23,13 @@ previously failed on round 1 due to a missing synchronization point in the wire 
 inbound reveal now waits for this peer's own reveal to be locally ready instead of failing
 immediately. Re-verified with a real 40-turn two-process run — see `docs/TODO.md`.
 
+✅ **Benign teardown race also fixed**: whichever side reached `GAME OVER` first used to exit
+immediately, occasionally cutting off the opponent's still-in-flight final-round call. `peer`
+now waits a few seconds after the outcome leaves `ONGOING` before exiting. Re-verified live:
+both processes now exit cleanly (code 0, zero errors) — see `docs/TODO.md`.
+
+No known blockers remain for a real live match at this point.
+
 ## Quick start (localhost — development and smoke testing)
 
 ```bash
