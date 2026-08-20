@@ -90,8 +90,11 @@
 - [x] 100 tests, 93% coverage, ruff-clean.
 - [x] Updated this file, PLAN.md, PRD.md, PRD_reporting_shell.md, README.md.
 - [x] **Explicitly did not build**: a `send-report` CLI command (needs game-completion
-      detection first) or run the live Gmail OAuth setup — walkthrough steps are written and
-      ready in `docs/PRD_reporting_shell.md` for when the user says go.
+      detection first — still open, see below).
+- [x] **Live Gmail OAuth setup — completed 2026-08-20, live with the user**: Google Cloud
+      project + Gmail API enabled + OAuth consent screen + `credentials.json`/`token.json` in
+      both repos, verified with a real send to `rmisegal+uoh26finalgame@gmail.com` via the
+      live Gmail API (real message id returned). See `docs/PRD_reporting_shell.md`.
 
 All 7 book-mandated build stages are now complete. Remaining work is the deferred
 integration items below, plus playing real games once ready.
@@ -120,10 +123,6 @@ integration items below, plus playing real games once ready.
 - [ ] **Step-0 "signing"** — currently sealed via SHA-256 commit-reveal, not an asymmetric
       signature (none was confirmed from the book text this session). Revisit if the book
       specifies real public-key signatures for Step-0.
-- [ ] **Live Gmail OAuth setup** — `infra/email_sender.py` is built and unit-tested but has
-      never sent a real email; the user runs the walkthrough in `docs/PRD_reporting_shell.md`
-      herself (creating a Google Cloud project, `credentials.json`, the browser consent flow)
-      when she's ready, guided live, per her explicit request earlier in this project.
 - [ ] **Game-completion detection / `send-report` command** — `PeerRuntime.run_turn_loop`
       still just runs exactly `--turns N`; it doesn't call `domain.rules.outcome_after_step`
       to detect capture/survival and stop with a real `GameOutcome`. Needed before a

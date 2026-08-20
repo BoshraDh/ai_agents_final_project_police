@@ -19,13 +19,12 @@ local-truth-only live view plus an audit-reusing replay viewer.
 | `crypto/commit_reveal.py` | `CommitRevealLog.entries()` — new read-only accessor so the report layer can build the `log` artifact from a completed game's sealed moves |
 
 ## Design decisions
-- **Gmail OAuth2 credential setup is a live, guided step — not run in this session.**
-  `infra/email_sender.py` only *consumes* an existing `token.json`; it never tries to create a
-  Google Cloud project, enable the Gmail API, or run the browser consent flow itself. Per the
-  user's own explicit request earlier in this project ("if you need me to install/download
-  anything... guide me and tell me 'okay'"), that flow is walked through live, step by step,
-  only when she's ready — see "Live setup walkthrough" below for exactly what that looks like
-  when she says go.
+- **Gmail OAuth2 credential setup is a live, guided step.** `infra/email_sender.py` only
+  *consumes* an existing `token.json`; it never tries to create a Google Cloud project, enable
+  the Gmail API, or run the browser consent flow itself. Per the user's own explicit request
+  earlier in this project ("if you need me to install/download anything... guide me and tell
+  me 'okay'"), that flow was walked through live, step by step, with her — see "Live setup
+  walkthrough" below, now marked complete with the real outcome.
 - **No CLI command actually sends a real email.** Unlike `tunnel`/`declare`/`peer`/`replay`,
   there is no `send-report` subcommand yet. Building one meaningfully requires a *completed*
   game (a real `outcome`, a real `game_id` from a finished match) — and `PeerRuntime`'s turn
@@ -46,20 +45,25 @@ local-truth-only live view plus an audit-reusing replay viewer.
   `BeliefState`, never a global board, even though `BeliefState` happens to be exact right now
   (see the stage-3/4 notes on why that's still honest, not a loophole).
 
-## Live setup walkthrough (for when the user is ready — not done automatically)
-1. Go to https://console.cloud.google.com/, create a project (any name).
-2. APIs & Services → Enable APIs → enable "Gmail API".
-3. APIs & Services → Credentials → Create Credentials → OAuth client ID → Application type
-   "Desktop app". Download the resulting file and save it as `credentials.json` in the repo
-   root (already gitignored — never committed).
-4. Run a short one-time Python script (to be added when she's ready) that uses
-   `google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file("credentials.json",
-   SCOPES).run_local_server()` — this opens her browser, she logs into the Google account
-   that should send the reports, and grants the `gmail.send` permission.
-5. That flow writes `token.json` (also gitignored) — from then on, `infra.email_sender`'s
-   default service factory can use it directly, no further login needed unless it expires.
-6. Confirmed working once `bb-ai-12-police declare` (already built, stage 6) style dry run of
-   `send_report` against a real small test message succeeds.
+## Live setup walkthrough — completed 2026-08-20
+Done live with the user, step by step, one confirmation at a time:
+1. Created a Google Cloud project (`bb-ai-12-police-thief`).
+2. Enabled the Gmail API.
+3. Configured the OAuth consent screen (External, added her own address as a test user —
+   the first attempt failed with `access_denied: 403` because that step was missed initially;
+   fixed by adding the test user under Audience and retrying).
+4. Created an OAuth client (Desktop app type), downloaded the client secret JSON, saved as
+   `credentials.json` in both repo roots (gitignored, never committed).
+5. Ran a one-time local script (`InstalledAppFlow.from_client_secrets_file(...)
+   .run_local_server()`) — opened her browser, she signed in and granted `gmail.send`; wrote
+   `token.json` (gitignored) with a `refresh_token`, so no further login is needed unless it's
+   revoked. Copied the same `token.json` into the thief repo too (same Google account covers
+   both peers for now).
+6. **Verified with a real send**: `infra.email_sender.send_report` sent an actual email via
+   the live Gmail API to `rmisegal+uoh26finalgame@gmail.com` (subject clearly marked as a
+   setup test, no real attachments), and Gmail returned a real message id. The one-time setup
+   script was deleted after use — `email_sender.py` is the only code that touches Gmail going
+   forward.
 
 ## Acceptance criteria (all met)
 - [x] `build_declaration`/`build_config`/`build_log`/`build_result` produce correct dicts,
@@ -82,10 +86,10 @@ local-truth-only live view plus an audit-reusing replay viewer.
       Replay Viewer performs, run for real against real files, not just in a unit test.
 - [x] `uv run pytest -q --cov=src` passes at 93% coverage (100 tests); `uv run ruff check .`
       is clean.
+- [x] **Live Gmail OAuth setup completed and verified with a real send** — see "Live setup
+      walkthrough" above.
 
 ## Explicitly deferred
-- Running the live Gmail OAuth setup and sending a real email — the user's own guided action,
-  per the walkthrough above.
 - A `send-report`/full game-completion CLI command — needs `PeerRuntime` to detect capture/
   survival and stop the turn loop with a real `GameOutcome`, which isn't built yet.
 - Real synchronized turn-taking, barrier placement, deceptive hints, pheromone spatial spread,
