@@ -84,8 +84,16 @@ opponent pool runs the kit's formula, not the book's. A conscious, explicitly-fl
 of book-formula compliance for the ability to actually complete a real match — see the "Open
 flag" in `docs/TODO.md` before final submission.
 
+**2026-08-24 — league kit 4-tool protocol adapter**: a new, alternate `league-peer` transport
+(`negotiate`/`receive_turn`/`submit_audit`/`receive_control`) plays real matches against
+opponents that run the `copthief-league-protocol` kit's wire shape instead of this repo's own
+`submit_commit`/`submit_reveal`. Verified with a real two-sided smoke test (both repos' actual
+code, real network calls) reaching identical outcomes on both sides. See
+`docs/PRD_league_adapter.md`.
+
 See `docs/PRD_base_logic.md` / `docs/PRD_mcp_infra.md` / `docs/PRD_strategy.md` /
 `docs/PRD_language_scent.md` / `docs/PRD_cloud_tunnel.md` / `docs/PRD_security_crypto.md` /
 `docs/PRD_reporting_shell.md` / `docs/PRD_turn_protocol.md` / `docs/PRD_end_of_game_detection.md`
+/ `docs/PRD_league_adapter.md`
 for stage-specific detail and `docs/TODO.md` for what's next (deferred integration work, not a
 new stage).

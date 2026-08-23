@@ -300,6 +300,34 @@ re-read the relevant chapters directly instead of leaving these as open guesses:
       NOT adopted; see the SMNGRP05 negotiation thread for the full reasoning (it would make
       this repo's real-time capture/survival detection unable to fire mid-game).
 
+## Done (league kit 4-tool protocol adapter — 2026-08-24)
+- [x] New `league/` package: `terms.py`, `smell.py`, `inbox.py`, `server_tools.py`, `client.py`,
+      `messages.py`, `outcome.py`, `runtime.py` (`LeagueRuntime`) — an **alternate, opt-in**
+      transport for opponents (SMNGRP05 and others in this league) that run the
+      `copthief-league-protocol` kit's 4-tool shape (`negotiate`/`receive_turn`/`submit_audit`/
+      `receive_control`) instead of this repo's own `submit_commit`/`submit_reveal`. New
+      `cli/league-peer` subcommand. Full design/reasoning in `docs/PRD_league_adapter.md`.
+- [x] Real position is never disclosed mid-game under this protocol — only a probabilistic
+      `smell_grid`. `league/smell.py`'s `guess_position_from_smell` feeds that to the
+      unmodified `HeuristicBrain`; capture uses an explicit `capture_claim`/`claim_response`
+      exchange instead of position equality (independently matches book rules 46/47, found
+      while cross-checking the book this session); survival is thief-self-declared via
+      `win_claim`.
+- [x] `domain/pheromones.py` gains `PheromoneField.as_dict()` (read-only snapshot, needed to
+      serialize `smell_grid`).
+- [x] `to_wire_terms` output verified byte-for-byte against SMNGRP05's own canonical terms
+      string — the handshake's exact-dict-equality gate passes.
+- [x] **Real two-sided smoke test** (both repos' actual code, real local FastMCP servers, real
+      network calls, not mocks): full `negotiate → per-round exchange → win_claim →
+      submit_audit` cycle completed; both sides independently agreed the terms matched and
+      arrived at the identical outcome (`survived`) at the identical `final_turn` — proof the
+      protocol is genuinely symmetric, not just that one side's code runs.
+- [x] 157 tests (29 new), 91% coverage, ruff-clean.
+- [x] Explicitly out of scope: barrier-based capture, real `receive_control` handling, strict
+      negotiate-mismatch refusal, independently re-verifying the opponent's audit records
+      against their commits. See `docs/PRD_league_adapter.md`'s "Explicitly out of scope"
+      section.
+
 ## Open flag — reconcile before final submission
 - [ ] **This repo's commit-reveal formula no longer matches the book's ch.5.3 literal code
       sample.** If book-formula compliance turns out to matter more for grading than being

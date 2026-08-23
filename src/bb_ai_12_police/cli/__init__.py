@@ -9,7 +9,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from bb_ai_12_police.cli import check_config, declare, peer, replay, tunnel
+from bb_ai_12_police.cli import check_config, declare, league_peer, peer, replay, tunnel
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -32,6 +32,11 @@ def main(argv: list[str] | None = None) -> int:
     replay_p = sub.add_parser("replay", help="step through a saved log_*.json, verify SHA-256")
     replay_p.add_argument("--log", required=True)
 
+    league_p = sub.add_parser("league-peer", help="play one sub-game over the league kit's wire")
+    league_p.add_argument("--repo-root", default=".")
+    league_p.add_argument("--turns", type=int, default=35)
+    league_p.add_argument("--opponent-url", default=None)
+
     args = parser.parse_args(argv)
 
     if args.command == "check-config":
@@ -44,6 +49,8 @@ def main(argv: list[str] | None = None) -> int:
         return declare.run(args.repo_root)
     if args.command == "replay":
         return replay.run(args.log)
+    if args.command == "league-peer":
+        return league_peer.run(args.repo_root, args.turns, args.opponent_url)
     return 1
 
 

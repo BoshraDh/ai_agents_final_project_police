@@ -50,3 +50,11 @@ def test_strongest_cell_tracks_the_most_recent_deposit():
     field.step(Position(0, 0))
     field.step(Position(1, 1))
     assert field.strongest_cell() == Position(1, 1)
+
+
+def test_as_dict_is_a_snapshot_not_a_live_view():
+    field = PheromoneField(center_intensity=0.9, decay_rate=0.10, grid_size=5)
+    field.step(Position(0, 0))
+    snapshot = field.as_dict()
+    field.step(Position(1, 1))
+    assert snapshot == {Position(0, 0): 0.9}

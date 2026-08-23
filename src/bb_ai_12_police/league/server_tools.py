@@ -1,0 +1,35 @@
+"""Registers the league kit's 4 inbound tools on an existing FastMCP
+instance, alongside (not replacing) `mcp/server.py`'s own
+`submit_commit`/`submit_reveal`. Every handler just hands the message to
+the `LeagueInbox` for the (separate-thread) game loop to consume — no
+game logic lives here, matching `mcp/server.py`'s own thin-handler style.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from fastmcp import FastMCP
+
+from bb_ai_12_police.league.inbox import LeagueInbox
+
+
+def add_league_tools(mcp: FastMCP, inbox: LeagueInbox) -> None:
+    @mcp.tool
+    def negotiate(message: dict[str, Any]) -> dict[str, Any]:
+        inbox.receive_negotiate(message)
+        return {"ok": True}
+
+    @mcp.tool
+    def receive_turn(message: dict[str, Any]) -> dict[str, Any]:
+        inbox.receive_turn(message)
+        return {"ok": True}
+
+    @mcp.tool
+    def submit_audit(payload: dict[str, Any]) -> dict[str, Any]:
+        inbox.receive_audit(payload)
+        return {"ok": True}
+
+    @mcp.tool
+    def receive_control(message: dict[str, Any]) -> dict[str, Any]:
+        return {"ok": True}

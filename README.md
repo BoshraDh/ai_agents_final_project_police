@@ -34,6 +34,12 @@ literal formula, after live negotiation confirmed the real opponent pool runs th
 version. A conscious, explicitly-flagged trade-off (interoperability over strict spec
 compliance) — see the "Open flag" in `docs/TODO.md` before final submission.
 
+✅ **New: league kit 4-tool protocol adapter** (`bb-ai-12-police league-peer`) — plays real
+matches against opponents that run the `copthief-league-protocol` kit's wire shape
+(`negotiate`/`receive_turn`/`submit_audit`/`receive_control`) instead of this repo's own
+`submit_commit`/`submit_reveal`. Verified end-to-end with a real two-sided smoke test — see
+`docs/PRD_league_adapter.md`.
+
 No known blockers remain for a real live match at this point.
 
 ## Quick start (localhost — development and smoke testing)

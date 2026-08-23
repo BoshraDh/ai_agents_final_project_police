@@ -43,6 +43,10 @@ class PheromoneField:
             return None
         return max(self._intensities, key=self._intensities.__getitem__)
 
+    def as_dict(self) -> dict[Position, float]:
+        """Read-only snapshot of every tracked cell's intensity."""
+        return dict(self._intensities)
+
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> PheromoneField:
         pheromones = config["pheromones"]
