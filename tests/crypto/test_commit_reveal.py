@@ -13,22 +13,25 @@ from bb_ai_12_police.crypto.commit_reveal import (
 )
 
 
-def test_compute_commitment_matches_the_books_exact_formula():
-    """Hcommit = SHA256(canonical_json({...payload, "nonce": nonce})) — book ch.5.3.
+def test_compute_commitment_matches_the_league_kits_exact_formula():
+    """Hcommit = SHA256(canonical_json(payload) + "|" + nonce) — league kit formula.
 
-    The nonce is one more field inside the single canonically-serialized
-    record, not concatenated onto the JSON string separately.
+    Deliberately NOT the book's ch.5.3 formula (nonce inside the JSON) —
+    see the module docstring for why this repo follows the league's
+    shared kit convention instead.
     """
     payload = {"state": "s0", "move": "N", "intent": "truth"}
     nonce = "deadbeef"
-    expected = hashlib.sha256(
-        canonical_json({**payload, "nonce": nonce}).encode("utf-8")
-    ).hexdigest()
+    expected = hashlib.sha256(f"{canonical_json(payload)}|{nonce}".encode()).hexdigest()
     assert compute_commitment(payload, nonce) == expected
 
 
 def test_canonical_json_sorts_keys_and_strips_whitespace():
     assert canonical_json({"b": 1, "a": 2}) == '{"a":2,"b":1}'
+
+
+def test_canonical_json_does_not_escape_non_ascii():
+    assert canonical_json({"hint": "לא תפסת אותי"}) == '{"hint":"לא תפסת אותי"}'
 
 
 def test_generate_nonce_returns_distinct_hex_strings():

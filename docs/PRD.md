@@ -76,6 +76,14 @@ commit-reveal rounds continuously, the police side auto-detects `GAME OVER` corr
 both processes exit cleanly with no errors. No known blockers remain for a real live match.
 See `docs/TODO.md` for full detail.
 
+**2026-08-24 — deliberate deviation from the book's commit-reveal formula**: `FR-9`'s
+`compute_commitment` now follows the league's shared `copthief-league-protocol` kit formula
+(nonce concatenated outside the canonical JSON, `ensure_ascii=False`) instead of the book's
+ch.5.3 literal formula, after live negotiation with real opponent teams confirmed the actual
+opponent pool runs the kit's formula, not the book's. A conscious, explicitly-flagged trade-off
+of book-formula compliance for the ability to actually complete a real match — see the "Open
+flag" in `docs/TODO.md` before final submission.
+
 See `docs/PRD_base_logic.md` / `docs/PRD_mcp_infra.md` / `docs/PRD_strategy.md` /
 `docs/PRD_language_scent.md` / `docs/PRD_cloud_tunnel.md` / `docs/PRD_security_crypto.md` /
 `docs/PRD_reporting_shell.md` / `docs/PRD_turn_protocol.md` / `docs/PRD_end_of_game_detection.md`

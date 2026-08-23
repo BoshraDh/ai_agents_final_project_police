@@ -1,15 +1,18 @@
-"""SHA-256 commit-reveal sealing (book's Commit->Acknowledge->Reveal->Audit,
-ch.5.3 — confirmed against the book text: `Hcommit = SHA256(canonical_json(
-{...payload, "nonce": nonce}))`, i.e. the nonce is one more field inside the
-single canonically-serialized record, not appended outside it. The book's
-own reference formula covers `{state, move, intent, nonce}` plus the hint,
-step number, and role; this module stays generic over `payload`'s shape —
-callers decide which fields to include. `CommitRevealLog` accumulates one
-sealed entry per turn and can audit the whole sequence after the fact,
-which is what "a mutual post-game audit re-verifies every step" (FR-9)
-actually checks. The wire-level Commit/Acknowledge/Reveal message exchange
-between peers is not implemented here — see `docs/PRD_security_crypto.md`
-for why that stays a documented open item.
+"""SHA-256 commit-reveal sealing.
+
+Deliberately follows the league's shared `copthief-league-protocol` kit
+formula (https://github.com/Imreec/copthief-league-protocol), NOT the
+book's own ch.5.3 literal code sample — a conscious, informed deviation
+(2026-08-24) made because the actual opponent pool in this league has
+converged on the kit's formula rather than the book's, and matching them
+is what makes real matches possible. The book puts the nonce *inside* the
+canonical JSON record; the kit instead does
+`Hcommit = SHA256(canonical_json(payload) + "|" + nonce)` — nonce
+pipe-concatenated *outside* the JSON, with `ensure_ascii=False`. See
+`docs/TODO.md` for the full reasoning and the explicit trade-off this
+was weighed against. `CommitRevealLog` accumulates one sealed entry per
+turn and can audit the whole sequence after the fact, which is what "a
+mutual post-game audit re-verifies every step" (FR-9) actually checks.
 """
 
 from __future__ import annotations
@@ -22,7 +25,7 @@ from typing import Any
 
 
 def canonical_json(payload: dict[str, Any]) -> str:
-    return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
 
 
 def generate_nonce() -> str:
@@ -30,9 +33,8 @@ def generate_nonce() -> str:
 
 
 def compute_commitment(payload: dict[str, Any], nonce: str) -> str:
-    """Hcommit = SHA256(canonical_json({**payload, "nonce": nonce})) — book ch.5.3."""
-    record = {**payload, "nonce": nonce}
-    material = canonical_json(record)
+    """Hcommit = SHA256(canonical_json(payload) + "|" + nonce) — league kit formula."""
+    material = f"{canonical_json(payload)}|{nonce}"
     return hashlib.sha256(material.encode("utf-8")).hexdigest()
 
 

@@ -28,6 +28,12 @@ immediately, occasionally cutting off the opponent's still-in-flight final-round
 now waits a few seconds after the outcome leaves `ONGOING` before exiting. Re-verified live:
 both processes now exit cleanly (code 0, zero errors) — see `docs/TODO.md`.
 
+⚠️ **2026-08-24 — one deliberate exception to "the book wins"**: the commit-reveal hash formula
+now follows the league's shared `copthief-league-protocol` kit instead of the book's ch.5.3
+literal formula, after live negotiation confirmed the real opponent pool runs the kit's
+version. A conscious, explicitly-flagged trade-off (interoperability over strict spec
+compliance) — see the "Open flag" in `docs/TODO.md` before final submission.
+
 No known blockers remain for a real live match at this point.
 
 ## Quick start (localhost — development and smoke testing)

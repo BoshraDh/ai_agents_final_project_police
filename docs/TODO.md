@@ -269,6 +269,44 @@ re-read the relevant chapters directly instead of leaving these as open guesses:
       run. Re-running always passes cleanly; the GUI code itself is correct (verified via
       multiple clean full-suite runs). Not worth chasing further in this session.
 
+## Done (deliberate switch to the league's shared commit formula — 2026-08-24)
+- [x] **`crypto/commit_reveal.py`'s `compute_commitment` changed from the book's ch.5.3 literal
+      formula to the `copthief-league-protocol` kit's formula** (nonce pipe-concatenated
+      *outside* the canonical JSON, `ensure_ascii=False`), a conscious, explicitly-weighed
+      deviation from the book — see the module docstring for the exact before/after formulas.
+      Confirmed against the kit's own `verify_vectors.py` source (`ref_commit`), not a
+      paraphrase.
+- [x] **Why**: live negotiation with two real opponent teams this session (SMNGRP05,
+      and earlier the imreeyal/anrbj666 pairing) surfaced that the actual opponent pool in
+      this league has converged on this kit's formula rather than the book's literal one —
+      confirmed directly by SMNGRP05 rereading the book themselves mid-negotiation and
+      admitting "we have been treating a third-party kit as if it were the specification."
+      Matching the book exactly, as this repo did until now, means failing every real
+      audit against that pool. The user made an explicit, informed choice to prioritize
+      being able to actually play a real match over strict book-formula compliance, after
+      being told directly this trades away conformance to the graded specification.
+- [x] `canonical_json` gains `ensure_ascii=False`.
+- [x] Tests: `test_compute_commitment_matches_the_league_kits_exact_formula` replaces the old
+      book-formula-pinning test; added `test_canonical_json_does_not_escape_non_ascii`.
+      127 tests police / 128 tests thief, ruff-clean both.
+- [x] **`config/game.toml` (thief) — `my_port` changed from 8801 to 8802**, matching police's
+      port. Reason: our free-tier ngrok account only supports one live public hostname at a
+      time; pointing both peers at the same local port lets one ngrok tunnel serve whichever
+      of our two processes is actually running at a given moment (they're never run
+      simultaneously against the same opponent). Updated the 3 tests that hardcoded 8801.
+- [x] **Not changed**: the wire message shape/timing (still per-round `submit_commit`/
+      `submit_reveal`, matching the book's step 3/4 reveal timing) and the tool names
+      themselves — SMNGRP05's 4-tool, audit-only-reveal shape was evaluated and explicitly
+      NOT adopted; see the SMNGRP05 negotiation thread for the full reasoning (it would make
+      this repo's real-time capture/survival detection unable to fire mid-game).
+
+## Open flag — reconcile before final submission
+- [ ] **This repo's commit-reveal formula no longer matches the book's ch.5.3 literal code
+      sample.** If book-formula compliance turns out to matter more for grading than being
+      able to complete a real match, this is a one-function revert (see git history /
+      the module docstring's "before" formula) — not a design dead-end, a live, reversible
+      trade-off made under time pressure the night before a deadline.
+
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication
       approach, decision-making, LLM usage, live-GUI verification, replay-viewer
