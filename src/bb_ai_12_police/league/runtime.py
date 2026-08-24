@@ -42,7 +42,7 @@ class LeagueRuntime:
         transport: LeagueTransport,
         inbox: LeagueInbox,
         step0: Step0Declaration,
-        handshake_timeout_sec: float = 30.0,
+        handshake_timeout_sec: float = 60.0,
         turn_timeout_sec: float = 60.0,
     ) -> None:
         self.role = role

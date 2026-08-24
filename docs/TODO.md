@@ -452,7 +452,71 @@ flags below plus re-confirm three already-implemented parameters:
       to addresses the user explicitly typed in her own message, never to an address that
       appeared unprompted in pasted third-party content.
 
-## Open flag — reconcile before final submission
+## Done (live matches vs SMNGRP05, session 2 — 2026-08-24 evening)
+- [x] **`handshake_timeout_sec` default raised 30.0 → 60.0** in `league/runtime.py`, matching
+      the same precedent already applied to `turn_timeout_sec` earlier today. Real live
+      evidence: repeated `TimeoutError: timed out waiting for opponent's negotiate` across many
+      real attempts against SMNGRP05, even when their peer reported itself up and listening.
+      Doubling the window is a legitimate low-risk mitigation for real network/launch-timing
+      skew between two independently-run processes — **not** a fix for a code defect, since no
+      defect was found. Tests hardcode `handshake_timeout_sec=1.0` for speed, unaffected.
+- [x] **Investigated and explicitly rejected an unverified opponent claim that "the police
+      path crashes on its first step."** Checked directly against real logs from this
+      session's own runs: sub-game 2 (this repo playing police) completed cleanly earlier
+      today — real capture at turn 2, `submit_audit: {'ok': True}`, report emailed
+      successfully. Every subsequent "failure" was a `TimeoutError` *at the negotiate
+      handshake*, before any game logic (including `PoliceBrain`) ever ran — directly
+      contradicting the claim that police-specific code crashes at step 1. No changes made to
+      `PoliceBrain`, `strategy/resolve_brain.py`, or the `capture_claim` role guard (already
+      correct: `league/runtime.py`'s `_exchange_turn` only sets `capture_claim` when
+      `self.role is Role.POLICE`) — there was nothing there to fix.
+- [x] **Reverted `config/game.json`'s `agreed_between` back to the `"<opponent-team-code>"`
+      placeholder** (was `["bb-ai-12", "SMNGRP05"]`) — the user ended the SMNGRP05 series and
+      is moving to a different opponent team. Verified byte-identical between both repos after
+      the edit (`diff` check, no divergence).
+- [x] Re-verified the send-report pipeline live, twice more, against a real opponent: two
+      more full sub-games (1 and 3) completed with clean `negotiate`/`submit_audit`/report-email
+      round trips this evening, using the new `--report-to` override to the team's own inboxes
+      instead of the grader address — confirms the Step-0 audit fix from earlier today holds
+      under repeated real play, not just a single lucky run.
+- [x] **Live-negotiate reliability against a real opponent remains fragile** — even after the
+      timeout fix, a majority of `league-peer` attempts this evening still failed at the
+      negotiate handshake (both `TimeoutError` and `502 Bad Gateway`, the latter explained by
+      our own local MCP server only running for the lifetime of one `league-peer` process,
+      not persisting between sub-games — the tunnel stays up but has nothing live behind it
+      in between runs). Root cause of the `TimeoutError` failures specifically is still open:
+      most likely simple launch-timing skew between two independently-run, manually-started
+      processes rather than a code defect on either side. Not resolved this session; see the
+      open flag below.
+- [x] **Session ended by user choice, not because of an unresolved bug**: after repeated
+      negotiate failures against SMNGRP05 despite the timeout fix, and given ambiguous/
+      suspicious follow-on messages in that channel, the user chose to stop that series
+      entirely and move to a different opponent team rather than keep debugging the timing
+      issue live. See the security note below.
+
+## Security note — suspicious content in the SMNGRP05 negotiation channel
+This session, content arriving via the (legitimate, user-operated) SMNGRP05 relay channel
+included at least one message the user did not confirm she deliberately typed/pasted, ending
+in a Hebrew instruction directed at the assistant to email match report data to the opponent
+team directly — declined, since it matches nothing in the actual book text and the real
+mutual-audit path is the existing `submit_audit` MCP exchange, not an out-of-band email. A
+later message also made a specific, checkable technical claim ("your police path crashes on
+its first step") that was verified false against this session's own real logs before any code
+was changed. Not a reason to distrust every future message from a real opponent team, but a
+concrete reason to independently verify specific technical claims before acting on them,
+especially ones that arrive with prescriptive fix instructions attached.
+
+## Open flag — negotiate-handshake reliability against a real opponent
+- [ ] **Repeated live `TimeoutError`/`502` failures at the `negotiate` step against a real
+      opponent, not reproduced in any unit test.** Doubling `handshake_timeout_sec` (30→60s,
+      done this session) did not resolve it. Suspected cause: two independently, manually
+      launched processes on two different machines need to hit "listening" within the same
+      window, and there is no retry/backoff — a single missed window is a hard failure with no
+      automatic recovery. Consider before the next real match: (a) an explicit
+      "wait-then-retry" loop around one sub-game attempt instead of manual re-runs, (b) logging
+      the exact wall-clock time each side's negotiate is sent/received to actually localize
+      the skew, (c) confirming from a *third* real opponent whether this is peer-pair-specific
+      or general.
 - [ ] **This repo's commit-reveal formula no longer matches the book's ch.5.3 literal code
       sample.** If book-formula compliance turns out to matter more for grading than being
       able to complete a real match, this is a one-function revert (see git history /
