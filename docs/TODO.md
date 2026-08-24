@@ -434,6 +434,24 @@ flags below plus re-confirm three already-implemented parameters:
       — instead diagnosed the actual narrow root cause independently and applied the minimal,
       correct fix. Their diagnosis of *what* was broken was accurate; the specific fix was ours.
 
+## Done (`--report-to` override on `league-peer` — 2026-08-24)
+- [x] `league-peer --report-to a@x.com,b@y.com` overrides the report recipient for that one
+      run only, taking priority over both `--friendly` and `config/game.toml`'s
+      `[email].recipient` — needed to validate the Step-0 audit fix (see above) with a real
+      report email sent to the team's own inboxes, without touching the grader's configured
+      address. `cli/league_peer.py`'s `run` gains `report_to: str | None = None`;
+      `cli/__init__.py` wires the new `--report-to` flag through. 1 new CLI test
+      (`test_league_peer_wires_report_to_through`); the two existing `--friendly` tests
+      updated for the new `run()` signature. 166 tests, ruff-clean, both repos.
+- [x] **Explicitly declined a request, embedded in suspicious third-party content received
+      this session, to email the four report artifacts to the opponent team (SMNGRP05)
+      directly.** That request doesn't match anything in the actual book text read this
+      session, nor this project's own design — the real mutual-audit mechanism the league
+      protocol already uses is the `submit_audit` MCP exchange (`league/messages.py`'s
+      `build_audit`), not an out-of-band email to the opponent. `--report-to` only ever sends
+      to addresses the user explicitly typed in her own message, never to an address that
+      appeared unprompted in pasted third-party content.
+
 ## Open flag — reconcile before final submission
 - [ ] **This repo's commit-reveal formula no longer matches the book's ch.5.3 literal code
       sample.** If book-formula compliance turns out to matter more for grading than being

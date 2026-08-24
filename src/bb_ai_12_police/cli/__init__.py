@@ -42,6 +42,12 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="uncounted practice game: skip the automatic end-of-game report email",
     )
+    league_p.add_argument(
+        "--report-to",
+        default=None,
+        help="override the report recipient (comma-separated emails) for this run only; "
+        "takes priority over --friendly, never touches config/game.toml's own recipient",
+    )
 
     args = parser.parse_args(argv)
 
@@ -57,7 +63,12 @@ def main(argv: list[str] | None = None) -> int:
         return replay.run(args.log)
     if args.command == "league-peer":
         return league_peer.run(
-            args.repo_root, args.turns, args.opponent_url, args.sub_game, args.friendly
+            args.repo_root,
+            args.turns,
+            args.opponent_url,
+            args.sub_game,
+            args.friendly,
+            args.report_to,
         )
     return 1
 

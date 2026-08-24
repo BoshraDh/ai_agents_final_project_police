@@ -34,6 +34,7 @@ def run(
     opponent_url: str | None,
     sub_game: int | None,
     friendly: bool = False,
+    report_to: str | None = None,
 ) -> int:
     cfg = ConfigManager(repo_root)
     shared = cfg.load_shared()
@@ -71,22 +72,31 @@ def run(
         step0=Step0Declaration.create(group_id),
     )
     asyncio.run(_play(runtime, turns, sub_game_number))
-    if friendly:
+    if runtime.outcome is GameOutcome.ONGOING:
+        return 0
+    if report_to:
+        # Explicit override always wins: e.g. a validation send to the team's
+        # own inboxes for an uncounted dry run, never the configured grader
+        # address unless report_to is that address itself.
+        recipient = report_to
+    elif friendly:
         print("[report] --friendly: skipping the automatic report email (uncounted game).")
-    elif runtime.outcome is not GameOutcome.ONGOING:
-        emit_report(
-            logs_dir=Path(repo_root) / "logs",
-            group_id=group_id,
-            sub_game_number=sub_game_number,
-            outcome=runtime.outcome,
-            role=Role.POLICE,
-            commit_log=runtime.commit_log,
-            step0=runtime.step0,
-            shared_config=shared,
-            game_json_sha256=cfg.game_json_sha256(),
-            recipient=private["email"]["recipient"],
-            token_path=Path(repo_root) / "token.json",
-        )
+        return 0
+    else:
+        recipient = private["email"]["recipient"]
+    emit_report(
+        logs_dir=Path(repo_root) / "logs",
+        group_id=group_id,
+        sub_game_number=sub_game_number,
+        outcome=runtime.outcome,
+        role=Role.POLICE,
+        commit_log=runtime.commit_log,
+        step0=runtime.step0,
+        shared_config=shared,
+        game_json_sha256=cfg.game_json_sha256(),
+        recipient=recipient,
+        token_path=Path(repo_root) / "token.json",
+    )
     return 0
 
 
