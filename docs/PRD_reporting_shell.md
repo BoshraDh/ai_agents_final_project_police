@@ -25,19 +25,16 @@ local-truth-only live view plus an audit-reusing replay viewer.
   earlier in this project ("if you need me to install/download anything... guide me and tell
   me 'okay'"), that flow was walked through live, step by step, with her — see "Live setup
   walkthrough" below, now marked complete with the real outcome.
-- **No CLI command actually sends a real email.** Unlike `tunnel`/`declare`/`peer`/`replay`,
-  there is no `send-report` subcommand yet. Building one meaningfully requires a *completed*
-  game (a real `outcome`, a real `game_id` from a finished match) — and `PeerRuntime`'s turn
-  loop doesn't yet detect capture/survival and stop (it always runs exactly `--turns N`
-  regardless of outcome). Wiring `send-report` before that exists would mean sending a report
-  about a game that didn't really finish. This whole pipeline (declare → seal moves → build
-  artifacts → write → email) was instead verified manually end-to-end with a standalone
-  script — see Acceptance Criteria — proving every piece works correctly in isolation.
-- **No `report/emit.py`.** The book's naming has `emit.py` alongside `report_writer.py`; here
-  `report_writer.write_artifacts` already does the one thing `emit` would orchestrate
-  (build → write). A separate emit module would just be a thin wrapper around
-  `report_writer.write_artifacts` + `infra.send_report`, and is deferred to whenever the real
-  game-completion orchestrator (mentioned above) exists to call it meaningfully.
+- **Update — 2026-08-24: `report/emit.py` now exists and is wired in.** Both blockers above
+  are resolved: `PeerRuntime`/`LeagueRuntime` now detect capture/survival and stop with a real
+  `GameOutcome` (see `docs/PRD_end_of_game_detection.md`), so `emit_report(...)` — build all
+  four artifacts, write them, email them via `send_report` under the Gatekeeper — has a real
+  outcome to report. `cli/peer.py` and `cli/league_peer.py` both call it once their run leaves
+  `ONGOING`. A failed send is logged and swallowed, not fatal, since the artifacts are already
+  safely on disk by then. See `docs/TODO.md`'s "Done (automatic send-report hook)" for the
+  exact wiring and `tests/report/test_emit.py` for the send-succeeds/send-fails coverage.
+  **Not yet proven with a real live send from inside a real match** — the next real game
+  played will be the first live end-to-end proof of this hook specifically.
 - **The Gatekeeper's `queue_depth` is stored/validated but no bounded queue is built.** A
   single caller (one email, once, per finished game) never needs a real queue; `run_guarded`'s
   retry-with-backoff already covers the realistic case of a transient 429 from Gmail.
@@ -90,8 +87,8 @@ Done live with the user, step by step, one confirmation at a time:
       walkthrough" above.
 
 ## Explicitly deferred
-- A `send-report`/full game-completion CLI command — needs `PeerRuntime` to detect capture/
-  survival and stop the turn loop with a real `GameOutcome`, which isn't built yet.
+- ~~A `send-report`/full game-completion CLI command~~ — **built 2026-08-24**, see the design
+  decisions above and `docs/TODO.md`.
 - Real synchronized turn-taking, barrier placement, deceptive hints, pheromone spatial spread,
   live ngrok tunnel — all still open from earlier stages (see `docs/TODO.md`).
 - `cli.py` is now 145 lines — close to the 150-line cap. The next subcommand added will need

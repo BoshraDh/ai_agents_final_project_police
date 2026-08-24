@@ -40,13 +40,19 @@ matches against opponents that run the `copthief-league-protocol` kit's wire sha
 `submit_commit`/`submit_reveal`. Verified end-to-end with a real two-sided smoke test — see
 `docs/PRD_league_adapter.md`.
 
+✅ **New: automatic end-of-game report email** — `report/emit.py` now builds the four mandatory
+JSON artifacts, writes them, and emails them to the grader (`config/game.toml`'s
+`[email].recipient`) via the already-live-verified Gmail OAuth setup, automatically whenever
+`peer`/`league-peer` finish with a real outcome. No more manual step. See `docs/TODO.md`'s
+"Done (automatic send-report hook)".
+
 No known blockers remain for a real live match at this point.
 
 ## Quick start (localhost — development and smoke testing)
 
 ```bash
 uv sync
-uv run pytest -q --cov=src --cov-report=term-missing   # 127 tests, 93% coverage
+uv run pytest -q --cov=src --cov-report=term-missing   # 162 tests, 90% coverage
 uv run ruff check .                                      # zero violations
 uv run bb-ai-12-police check-config                       # sanity-check config loading
 uv run bb-ai-12-police declare                            # print a sealed Step-0 declaration

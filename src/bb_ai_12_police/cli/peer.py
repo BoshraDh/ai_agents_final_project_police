@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import time
+from pathlib import Path
 
 from bb_ai_12_police.crypto.commit_reveal import CommitRevealLog
+from bb_ai_12_police.crypto.step0 import Step0Declaration
 from bb_ai_12_police.domain.barriers import BarrierSet
 from bb_ai_12_police.domain.belief import BeliefState
 from bb_ai_12_police.domain.board import Board
@@ -12,6 +14,7 @@ from bb_ai_12_police.domain.pheromones import PheromoneField
 from bb_ai_12_police.domain.protocol import GameOutcome, Role
 from bb_ai_12_police.llm.resolve_provider import resolve_provider
 from bb_ai_12_police.peer.turn_handler import TurnHandler
+from bb_ai_12_police.report.emit import emit_report
 from bb_ai_12_police.runtime.peer_runtime import PeerRuntime
 from bb_ai_12_police.shared.config_manager import ConfigManager
 from bb_ai_12_police.strategy.resolve_brain import resolve_brain
@@ -45,6 +48,20 @@ def run(repo_root: str, turns: int) -> int:
     runtime.start_server()
     runtime.run_turn_loop(turns)
     if runtime.outcome is not GameOutcome.ONGOING:
+        group_id = private["game"]["group_id"]
+        emit_report(
+            logs_dir=Path(repo_root) / "logs",
+            group_id=group_id,
+            sub_game_number=int(private["game"]["sub_game_number"]),
+            outcome=runtime.outcome,
+            role=Role.POLICE,
+            commit_log=runtime.commit_log,
+            step0=Step0Declaration.create(group_id),
+            shared_config=shared,
+            game_json_sha256=cfg.game_json_sha256(),
+            recipient=private["email"]["recipient"],
+            token_path=Path(repo_root) / "token.json",
+        )
         # This process exits right after this and kills the (daemon) server
         # thread with it; linger briefly so the opponent's in-flight
         # final-round call -- which can arrive just after we declared the

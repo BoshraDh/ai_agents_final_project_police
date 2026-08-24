@@ -259,10 +259,6 @@ re-read the relevant chapters directly instead of leaving these as open guesses:
 - [ ] **Live ngrok tunnel** — `mcp/tunnel.py` is built and unit-tested but never run live this
       session (see `docs/PRD_cloud_tunnel.md`); the user runs `bb-ai-12-police tunnel` herself
       once ngrok is installed and she's ready for a real match.
-- [ ] **`send-report` command** — game-completion detection is now built (see "Done
-      (automatic end-of-game detection)" above), so a `send-report` CLI command that builds +
-      emails the four JSON artifacts automatically once `PeerRuntime.outcome` leaves `ONGOING`
-      can now be built meaningfully (see `docs/PRD_reporting_shell.md`).
 - [ ] **Known test flakiness (environmental, not a code bug)**: `tests/gui/` occasionally hits
       `_tkinter.TclError: Can't find a usable init.tcl` under this Windows machine's file-I/O
       contention when many Tk interpreters are created/destroyed back-to-back in one `pytest`
@@ -348,6 +344,32 @@ re-read the relevant chapters directly instead of leaving these as open guesses:
       time. `LeagueRuntime.negotiate(sub_game_number=1)` and `cli league-peer --sub-game N` (else
       falls back to `config/game.toml`'s `[game].sub_game_number`) let a real multi-game series
       advance the number correctly instead of always sending 1.
+
+## Done (automatic send-report hook — 2026-08-24)
+- [x] **New `report/emit.py` — `emit_report(...)`**: builds all four mandatory artifacts
+      (`build_declaration/config/log/result`), writes them via `report_writer.write_artifacts`,
+      then emails them via `infra.email_sender.send_report`, guarded by
+      `TokenBucketGatekeeper`/`run_guarded` (rate-limit + retry/backoff). A failed send is
+      logged and swallowed, not fatal — the four artifacts are already safely on disk by then,
+      so a Gmail hiccup must never crash a peer process right after a real game outcome.
+- [x] `cli/peer.py` — after `run_turn_loop` returns with `runtime.outcome is not ONGOING`,
+      calls `emit_report` before the shutdown-grace sleep. Since `PeerRuntime` never runs a
+      real Step-0 exchange yet (a pre-existing gap, see the Step-0 open flag above), the
+      declaration artifact uses a fresh `Step0Declaration.create(group_id)` at report time,
+      same pattern as the standalone `declare` subcommand.
+- [x] `cli/league_peer.py` — after `asyncio.run(_play(...))` returns with `runtime.outcome is
+      not ONGOING`, calls `emit_report` using `LeagueRuntime`'s own `step0`/`commit_log`/
+      `group_id` (already real, from the actual negotiated match).
+- [x] Recipient read from `config/game.toml`'s existing `[email].recipient`; `token_path` is
+      `<repo_root>/token.json`, the same live-verified OAuth token from the stage-7 Gmail setup
+      (2026-08-20) — no new credential or setup step needed.
+- [x] 2 new tests (`tests/report/test_emit.py`): a successful build+write+send round trip
+      (asserts all 4 attachments exist and were sent), and a send failure that still leaves all
+      4 artifacts on disk and logs the error instead of raising. 162 tests, 90% coverage,
+      ruff-clean in both repos.
+- [x] **Not run live yet** — needs a real finished match to trigger; the next real game played
+      against an opponent will be the first live end-to-end proof (build → write → email) of
+      this hook, same "verify for real, not just in a unit test" bar as every other stage.
 
 ## Open flag — reconcile before final submission
 - [ ] **This repo's commit-reveal formula no longer matches the book's ch.5.3 literal code

@@ -268,6 +268,15 @@ opponent's straggling final-round call to land instead of hitting a torn-down co
 Re-ran the two-process verification again: both processes now exit with code 0 and zero
 errors, both independently printing `GAME OVER: survived`. See `docs/TODO.md` for full detail.
 
+## Automatic send-report hook — 2026-08-24
+`report/emit.py`'s `emit_report` (build → write → email) was always in the architecture
+diagram above but had no caller — `PRD_reporting_shell.md` deliberately deferred wiring it
+until a real `GameOutcome` existed. Both turn loops now produce one, so `cli/peer.py` and
+`cli/league_peer.py` each call `emit_report` once their run leaves `outcome is ONGOING`,
+sourcing the recipient from `config/game.toml`'s `[email].recipient` and the token from the
+already-live-verified `token.json`. See `docs/TODO.md`'s "Done (automatic send-report hook)"
+for the exact wiring per CLI subcommand and test coverage.
+
 ## Open items / flags (tracked, not silently decided)
 - `agreed_between` in `config/game.json` currently lists `"<opponent-team-code>"` as a
   placeholder — fill in the real opponent code once a match is negotiated, in both repos.
