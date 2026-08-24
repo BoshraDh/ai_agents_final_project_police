@@ -1,11 +1,9 @@
 """Game loop for the league kit's 4-tool protocol (negotiate/receive_turn/
-submit_audit), run as an alternative to `runtime/peer_runtime.py` against
-opponents that speak the kit's shape instead of ours. Real positions are
-never disclosed mid-game here — only `smell_grid` — so each side's own
+submit_audit), an alternative to `runtime/peer_runtime.py` for opponents
+that speak the kit's shape instead of ours. Real positions are never
+disclosed mid-game -- only `smell_grid` -- so each side's own
 `HeuristicBrain` is fed a best-guess position (`league/smell.py`) instead
-of the exact tracked position `PeerRuntime` uses. Barrier placement and
-barrier-based capture (book rules 46/47) are out of scope for this
-adapter — see `docs/PRD_league_adapter.md`.
+of the exact tracked position `PeerRuntime` uses.
 """
 
 from __future__ import annotations
@@ -47,7 +45,7 @@ class LeagueRuntime:
         inbox: LeagueInbox,
         step0: Step0Declaration,
         handshake_timeout_sec: float = 30.0,
-        turn_timeout_sec: float = 30.0,
+        turn_timeout_sec: float = 60.0,
     ) -> None:
         self.role = role
         self.own_position = own_position
@@ -85,12 +83,24 @@ class LeagueRuntime:
     async def play(self, turns: int) -> GameOutcome:
         for turn in range(1, turns + 1):
             self._play_one_turn(turn)
-            inbound = await self._exchange_turn(turn)
+            try:
+                inbound = await self._exchange_turn(turn)
+            except TimeoutError:
+                # Opponent went silent right at our own self-declared win
+                # boundary -- that doesn't undo what we already know locally.
+                if self._survived_now:
+                    self.outcome = GameOutcome.SURVIVED
+                    self.final_turn = turn
+                break
             self._absorb_inbound(inbound)
             if self.outcome is not GameOutcome.ONGOING:
                 self.final_turn = turn
                 break
-        await self._send_audit()
+        try:
+            reply = await self._send_audit()
+            print(f"[league] submit_audit reply: {reply!r}")
+        except Exception as exc:  # noqa: BLE001 - non-fatal; outcome is already decided
+            print(f"[league] submit_audit failed: {exc!r}")
         return self.outcome
 
     def _play_one_turn(self, turn: int) -> None:
@@ -131,10 +141,10 @@ class LeagueRuntime:
             self.role, self._survived_now, inbound
         )
 
-    async def _send_audit(self) -> None:
+    async def _send_audit(self) -> dict:
         result_claim = {
             GameOutcome.CAPTURED: "capture",
             GameOutcome.SURVIVED: "survival",
         }.get(self.outcome, "timeout")
         envelope = build_audit(self.role, self.commit_log, result_claim, self.step0)
-        await self.transport.send_audit(envelope)
+        return await self.transport.send_audit(envelope)

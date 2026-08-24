@@ -118,3 +118,16 @@ def test_play_runs_to_the_turn_cap_when_nothing_terminal_happens():
     assert outcome == GameOutcome.ONGOING
     assert runtime.final_turn is None
     assert len(transport.sent_turns) == 3
+
+
+def test_play_stays_ongoing_without_crashing_when_opponent_goes_silent():
+    # Nothing is ever delivered to the inbox -- wait_for_turn times out on
+    # round 1. Police has no self-declared win condition, so this should
+    # gracefully stop (not raise) and leave the outcome undetermined.
+    inbox = LeagueInbox()
+    transport = _FakeTransport()
+    runtime = _runtime(inbox, transport)
+    outcome = asyncio.run(runtime.play(5))
+    assert outcome == GameOutcome.ONGOING
+    assert runtime.final_turn is None
+    assert len(transport.sent_turns) == 1
