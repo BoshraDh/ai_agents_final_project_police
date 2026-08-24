@@ -328,6 +328,27 @@ re-read the relevant chapters directly instead of leaving these as open guesses:
       against their commits. See `docs/PRD_league_adapter.md`'s "Explicitly out of scope"
       section.
 
+## Done (league adapter hardening from real live matches vs SMNGRP05 — 2026-08-24)
+- [x] `LeagueRuntime.play` no longer lets a `TimeoutError` on the final exchange crash the
+      whole process before `submit_audit` is ever sent — found live after a real ~40-round
+      match against SMNGRP05's server died with an unhandled exception right at the survival
+      boundary. Now: if our own `win_claim` condition was already met locally, conclude
+      `SURVIVED` and still attempt `_send_audit` (best-effort, its own try/except).
+      `turn_timeout_sec` default raised 30.0 → 60.0.
+- [x] `_send_audit`'s result is no longer silently swallowed (`except Exception: pass`) — found
+      live when SMNGRP05 reported "no audit payload arrived" on a run that exited clean on our
+      side with no visible error. Now logs `[league] submit_audit reply: ...` on success or
+      `[league] submit_audit failed: ...` on failure, and `_send_audit` returns the reply dict.
+      (Root cause on their end turned out to be their own `audit_send_timeout_seconds` — fixed
+      on their side; our logging change is what surfaced the mismatch either way.)
+- [x] `build_negotiate` now sends `role` and `sub_game_number` — found live as a real gap: our
+      negotiate message never included `sub_game_number` at all (config had the field, nothing
+      read it), so every retry against an opponent whose own counter had advanced past 1 got
+      silently dropped by their anti-replay check, requiring a manual synchronized restart each
+      time. `LeagueRuntime.negotiate(sub_game_number=1)` and `cli league-peer --sub-game N` (else
+      falls back to `config/game.toml`'s `[game].sub_game_number`) let a real multi-game series
+      advance the number correctly instead of always sending 1.
+
 ## Open flag — reconcile before final submission
 - [ ] **This repo's commit-reveal formula no longer matches the book's ch.5.3 literal code
       sample.** If book-formula compliance turns out to matter more for grading than being

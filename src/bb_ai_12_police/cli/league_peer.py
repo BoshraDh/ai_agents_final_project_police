@@ -26,12 +26,13 @@ from bb_ai_12_police.shared.config_manager import ConfigManager
 from bb_ai_12_police.strategy.resolve_brain import resolve_brain
 
 
-def run(repo_root: str, turns: int, opponent_url: str | None) -> int:
+def run(repo_root: str, turns: int, opponent_url: str | None, sub_game: int | None) -> int:
     cfg = ConfigManager(repo_root)
     shared = cfg.load_shared()
     private = cfg.load_private()
     net = private["network"]
     group_id = private["game"]["group_id"]
+    sub_game_number = sub_game if sub_game is not None else int(private["game"]["sub_game_number"])
 
     turn_handler = TurnHandler()
     inbox = LeagueInbox()
@@ -61,13 +62,13 @@ def run(repo_root: str, turns: int, opponent_url: str | None) -> int:
         inbox=inbox,
         step0=Step0Declaration.create(group_id),
     )
-    asyncio.run(_play(runtime, turns))
+    asyncio.run(_play(runtime, turns, sub_game_number))
     return 0
 
 
-async def _play(runtime: LeagueRuntime, turns: int) -> None:
+async def _play(runtime: LeagueRuntime, turns: int, sub_game_number: int) -> None:
     async with runtime.transport:
-        agreed = await runtime.negotiate()
+        agreed = await runtime.negotiate(sub_game_number)
         print(f"negotiate: terms {'match' if agreed else 'DO NOT MATCH'} the opponent's")
         outcome = await runtime.play(turns)
         print(f"league game outcome: {outcome.value} (final_turn={runtime.final_turn})")

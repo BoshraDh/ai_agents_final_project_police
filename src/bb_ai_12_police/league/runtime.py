@@ -1,9 +1,7 @@
 """Game loop for the league kit's 4-tool protocol (negotiate/receive_turn/
-submit_audit), an alternative to `runtime/peer_runtime.py` for opponents
-that speak the kit's shape instead of ours. Real positions are never
-disclosed mid-game -- only `smell_grid` -- so each side's own
-`HeuristicBrain` is fed a best-guess position (`league/smell.py`) instead
-of the exact tracked position `PeerRuntime` uses.
+submit_audit) for opponents that speak the kit's shape instead of ours.
+Real positions are never disclosed mid-game -- only `smell_grid` -- so
+each side's brain is fed a best-guess position from `league/smell.py`.
 """
 
 from __future__ import annotations
@@ -69,11 +67,13 @@ class LeagueRuntime:
         self.final_turn: int | None = None
         self._pending_claim: list[int] | None = None
 
-    async def negotiate(self) -> bool:
+    async def negotiate(self, sub_game_number: int = 1) -> bool:
         terms = to_wire_terms(self.shared_config)
         nonce = self.step0.nonce
         signature = terms_signature(terms, nonce)
-        message = build_negotiate(terms, nonce, signature, self.group_id, self.members)
+        message = build_negotiate(
+            terms, nonce, signature, self.group_id, self.members, self.role.value, sub_game_number
+        )
         await self.transport.negotiate(message)
         theirs = self.inbox.wait_for_negotiate(self.handshake_timeout_sec)
         return theirs["terms"] == terms and verify_signature(

@@ -17,7 +17,13 @@ from bb_ai_12_police.league.smell import serialize_smell_grid
 
 
 def build_negotiate(
-    terms: dict, nonce: str, signature: str, group_id: str, members: list[str]
+    terms: dict,
+    nonce: str,
+    signature: str,
+    group_id: str,
+    members: list[str],
+    role: str,
+    sub_game_number: int,
 ) -> dict:
     return {
         "terms": terms,
@@ -25,6 +31,8 @@ def build_negotiate(
         "signature": signature,
         "group_id": group_id,
         "identity": {"group_id": group_id, "members": members},
+        "role": role,
+        "sub_game_number": sub_game_number,
     }
 
 

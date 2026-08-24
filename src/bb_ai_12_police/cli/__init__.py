@@ -36,6 +36,7 @@ def main(argv: list[str] | None = None) -> int:
     league_p.add_argument("--repo-root", default=".")
     league_p.add_argument("--turns", type=int, default=35)
     league_p.add_argument("--opponent-url", default=None)
+    league_p.add_argument("--sub-game", type=int, default=None)
 
     args = parser.parse_args(argv)
 
@@ -50,7 +51,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "replay":
         return replay.run(args.log)
     if args.command == "league-peer":
-        return league_peer.run(args.repo_root, args.turns, args.opponent_url)
+        return league_peer.run(args.repo_root, args.turns, args.opponent_url, args.sub_game)
     return 1
 
 

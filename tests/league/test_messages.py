@@ -14,9 +14,11 @@ _SCENT_CONFIG = {"pheromones": {
 
 
 def test_build_negotiate_nests_group_id_at_top_level_and_inside_identity():
-    message = build_negotiate({"a": 1}, "nonce", "sig", "bb-ai-12", ["id-1", "id-2"])
+    message = build_negotiate({"a": 1}, "nonce", "sig", "bb-ai-12", ["id-1", "id-2"], "police", 2)
     assert message["group_id"] == "bb-ai-12"
     assert message["identity"] == {"group_id": "bb-ai-12", "members": ["id-1", "id-2"]}
+    assert message["role"] == "police"
+    assert message["sub_game_number"] == 2
 
 
 def test_build_turn_includes_required_fields_and_omits_unset_optionals():
