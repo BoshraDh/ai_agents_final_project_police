@@ -17,7 +17,7 @@ def absorb_inbound(
         response = inbound.get("claim_response")
         if response is not None and response.get("caught"):
             return GameOutcome.CAPTURED, None
-        if inbound.get("win_claim", {}).get("type") == "survival":
+        if (inbound.get("win_claim") or {}).get("type") == "survival":
             return GameOutcome.SURVIVED, None
         return GameOutcome.ONGOING, None
 

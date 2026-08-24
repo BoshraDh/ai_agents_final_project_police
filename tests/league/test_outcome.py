@@ -28,6 +28,11 @@ def test_police_sees_survived_on_a_thief_win_claim():
     assert outcome == GameOutcome.SURVIVED
 
 
+def test_police_stays_ongoing_on_an_explicit_null_win_claim():
+    outcome, _ = absorb_inbound(Role.POLICE, survived_now=False, inbound={"win_claim": None})
+    assert outcome == GameOutcome.ONGOING
+
+
 def test_thief_buffers_a_pending_capture_claim_for_next_turn():
     outcome, claim = absorb_inbound(
         Role.THIEF, survived_now=False, inbound={"capture_claim": [3, 3]}
