@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "agreed_between": ["bb-ai-12", "<opponent-team-code>"],
+  "agreed_between": ["bb-ai-12", "SMNGRP05"],
   "board_and_agents": {
     "grid_size": 7,
     "num_agents": 2,
