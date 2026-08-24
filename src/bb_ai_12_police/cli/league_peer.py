@@ -28,7 +28,13 @@ from bb_ai_12_police.shared.config_manager import ConfigManager
 from bb_ai_12_police.strategy.resolve_brain import resolve_brain
 
 
-def run(repo_root: str, turns: int, opponent_url: str | None, sub_game: int | None) -> int:
+def run(
+    repo_root: str,
+    turns: int,
+    opponent_url: str | None,
+    sub_game: int | None,
+    friendly: bool = False,
+) -> int:
     cfg = ConfigManager(repo_root)
     shared = cfg.load_shared()
     private = cfg.load_private()
@@ -65,7 +71,9 @@ def run(repo_root: str, turns: int, opponent_url: str | None, sub_game: int | No
         step0=Step0Declaration.create(group_id),
     )
     asyncio.run(_play(runtime, turns, sub_game_number))
-    if runtime.outcome is not GameOutcome.ONGOING:
+    if friendly:
+        print("[report] --friendly: skipping the automatic report email (uncounted game).")
+    elif runtime.outcome is not GameOutcome.ONGOING:
         emit_report(
             logs_dir=Path(repo_root) / "logs",
             group_id=group_id,

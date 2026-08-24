@@ -395,6 +395,19 @@ flags below plus re-confirm three already-implemented parameters:
       claimed the book "does not confirm" a signing scheme; that was written without having
       read the book directly and is now fixed to cite the real quote.
 
+## Done (`--friendly` flag on `league-peer` — 2026-08-24)
+- [x] `league-peer --friendly` skips the automatic `emit_report` call for uncounted practice
+      games — needed because `emit_report` doesn't otherwise distinguish counted vs. uncounted
+      matches, and would otherwise email the grader's inbox (`config/game.toml`'s
+      `[email].recipient`) for a friendly/dry-run series too. `cli/league_peer.py`'s `run` gains
+      a `friendly: bool = False` param; `cli/__init__.py` wires the new `--friendly` argparse
+      flag through. 2 new CLI-level tests (flag threads through / defaults to `False`). 164
+      tests, ruff-clean, both repos.
+- [x] **Not built**: a real "run all 6 sub-games unattended" orchestrator inside either repo's
+      own code — deliberately kept as an external, uncommitted local script instead (not part
+      of the graded submission), since it just shells out to each repo's existing
+      `league-peer` CLI in sequence and needs no protocol/runtime changes.
+
 ## Open flag — reconcile before final submission
 - [ ] **This repo's commit-reveal formula no longer matches the book's ch.5.3 literal code
       sample.** If book-formula compliance turns out to matter more for grading than being
