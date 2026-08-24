@@ -506,6 +506,23 @@ was changed. Not a reason to distrust every future message from a real opponent 
 concrete reason to independently verify specific technical claims before acting on them,
 especially ones that arrive with prescriptive fix instructions attached.
 
+## Done (decisive evidence: negotiate failure is role-independent — 2026-08-24 late evening)
+- [x] **Definitively disproved the opponent's repeated claim that "police-as-server" fails
+      while "thief-as-client" succeeds.** Ran a fresh friendly series with roles swapped from
+      the usual order: sub-game 1 as **police** (this repo) succeeded immediately — real
+      capture at turn 2, `submit_audit: {'ok': True}`, report emailed. Sub-game 2 as
+      **thief** (the sibling repo, `ai_agents_final_project_thief`) then failed with the exact
+      same `TimeoutError: timed out waiting for opponent's negotiate` previously seen only on
+      police attempts. Since this is the *same failure mode, now on the thief side*, the
+      opponent's client/server-role theory is conclusively wrong: **the failure correlates
+      with "second sub-game launched immediately after the first," not with which role (or
+      which repo/brain) is playing.** No code changes made based on the opponent's diagnosis —
+      confirmed groundless a second, independent way (first via log/timestamp contradiction,
+      now via a controlled swapped-role experiment).
+- [x] Both this repo's `PoliceBrain` and the thief repo's `ThiefBrain` are confirmed working
+      correctly under real play (real capture, real 35-turn survival, real passing audits) —
+      not "broken and never fixed" as repeatedly claimed via the SMNGRP05 channel.
+
 ## Open flag — negotiate-handshake reliability against a real opponent
 - [ ] **Repeated live `TimeoutError`/`502` failures at the `negotiate` step against a real
       opponent, not reproduced in any unit test.** Doubling `handshake_timeout_sec` (30→60s,
