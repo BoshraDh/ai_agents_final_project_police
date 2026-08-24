@@ -233,10 +233,15 @@ re-read the relevant chapters directly instead of leaving these as open guesses:
       larger protocol change, not pursued here.
 
 ## Open flags (not blocking, must resolve before a real submission-counted match)
-- [ ] **Step-0 "signing" key** — book ch.5.5 mentions signing with "a key supplied in
-      advance"; no such key has been issued/found yet. Revisit if/when one is supplied (e.g.
-      in a course announcement or the reference repo's own Step-0 code), and treat the current
-      SHA-256-commit-reveal-based sealing as a placeholder until then.
+- [ ] **Step-0 "signing" key — CONFIRMED by direct book read, 2026-08-24.** §5.5, p.39–40:
+      "המפרט כולו נארז למחרוזת JSON ונחתם קריפטוגרפית באמצעות מפתח המסופק מראש, כך שלא ניתן
+      לזייפו בדיעבד" — "the entire spec is packed into a JSON string and cryptographically
+      signed using a key supplied in advance, so it cannot be forged after the fact." This is
+      now verified against the actual PDF text (not secondhand), and it describes a real
+      keyed-signature mechanism, distinct from this repo's unkeyed SHA-256 commit-reveal
+      sealing. No such key has been issued/found yet. Revisit if/when one is supplied (e.g. in
+      a course announcement or the reference repo's own Step-0 code — neither checked this
+      session), and treat the current sealing as a placeholder until then.
 - [ ] Replace `agreed_between: ["bb-ai-12", "<opponent-team-code>"]` with the real opponent
       code once a match is negotiated (both repos, kept byte-identical).
 - [ ] Replace `[game].members` placeholder student IDs in `config/game.toml`.
@@ -371,12 +376,45 @@ re-read the relevant chapters directly instead of leaving these as open guesses:
       against an opponent will be the first live end-to-end proof (build → write → email) of
       this hook, same "verify for real, not just in a unit test" bar as every other stage.
 
+## Done (book re-verification pass #2 — 2026-08-24, live PDF read this session)
+Unlike the 2026-08-20 pass (which relied on pre-extracted text), the actual
+`police_thief_p2p.pdf` was read directly, page by page, this session, to check the two open
+flags below plus re-confirm three already-implemented parameters:
+- [x] **Step-0 signing key** — the open flag two sections below is now upgraded from
+      "book ch.5.5 mentions..." to a verified exact quote with page number (§5.5, p.39–40). Real,
+      still-open gap: no key exists yet.
+- [x] **Commit-reveal formula deviation** — the open flag near the end of this file now cites
+      the actual mandatory/disqualifying rule (Appendix ה, Table 9, rule #17, p.129) verbatim.
+      Conclusion: the deviation's risk is lower than previously assumed (disqualification is
+      tied to *having no* SHA-256 commit-reveal mechanism, not to the exact byte formula), but
+      not zero if the grader's own tooling recomputes hashes independently.
+- [x] Re-confirmed unchanged, no code/config changes needed: `num_games=6` fixed (Appendix ו,
+      Table 18 rule 1, p.138); the full scoring table 20/5/5/10/2 (Table 17, p.138); every
+      Gatekeeper parameter (Table 19, p.139) — all match `config/game.json` exactly.
+- [x] `docs/PRD_security_crypto.md`'s Step-0 design-decision note corrected — it previously
+      claimed the book "does not confirm" a signing scheme; that was written without having
+      read the book directly and is now fixed to cite the real quote.
+
 ## Open flag — reconcile before final submission
 - [ ] **This repo's commit-reveal formula no longer matches the book's ch.5.3 literal code
       sample.** If book-formula compliance turns out to matter more for grading than being
       able to complete a real match, this is a one-function revert (see git history /
       the module docstring's "before" formula) — not a design dead-end, a live, reversible
       trade-off made under time pressure the night before a deadline.
+      **Risk re-assessed by direct book read, 2026-08-24 — lower than previously assumed, but
+      not zero.** Appendix ה, Table 9 ("קריפטוגרפיה, שלמות רישום ואפס-ידיעה"), rule #17, p.129,
+      is the actual mandatory/disqualifying requirement, and its wording is: "משתמשים
+      בפרוטוקול התחייבות-וחשיפה מבוסס SHA-256. סנקציה: **היעדר מנגנון** גורר אי-חוקיות של
+      הפתרון" — "use a SHA-256-based commit-reveal protocol. Sanction: **the absence of the
+      mechanism** causes the solution to be disqualified." The disqualification sanction is
+      keyed to not having a real commit-reveal mechanism at all, not to matching the book's
+      illustrative byte-level formula. This repo has a real, working SHA-256 commit-reveal
+      mechanism (just the league-kit's canonicalization instead of the book's own example) —
+      so rule #17 itself does not appear to disqualify this deviation. The residual risk: if
+      the instructor's own grading tooling independently recomputes commitments using the
+      book's literal ch.5.3 formula to verify log integrity, a differently-canonicalized hash
+      would still fail that specific check. Not re-verified against the reference repo's own
+      commit hash implementation this session.
 
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication

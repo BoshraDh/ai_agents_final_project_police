@@ -18,11 +18,19 @@ that need a fresh re-read before implementation.
 | `cli.py` | new `declare` subcommand — prints this peer's sealed Step-0 declaration as JSON | — |
 
 ## Design decisions
-- **"Signed" means sealed via SHA-256 commit-reveal, not an asymmetric signature.** The book
-  text confirmed this session specifies SHA-256, canonical JSON, and `secrets.token_hex`
-  nonces — it does not confirm a public-key signing scheme (RSA/Ed25519/etc.) for Step-0. This
-  module therefore does not invent one. If the book specifies real signatures elsewhere, that
-  needs revisiting before a real submission — logged in `docs/TODO.md`, not silently assumed.
+- **"Signed" means sealed via SHA-256 commit-reveal, not an asymmetric signature — a known,
+  book-confirmed gap, not an assumption.** Direct book text (§5.5, p.39–40, read live
+  2026-08-24): "המפרט כולו נארז למחרוזת JSON ונחתם קריפטוגרפית באמצעות מפתח המסופק מראש, כך
+  שלא ניתן לזייפו בדיעבד" — "the entire spec is packed into a JSON string and cryptographically
+  signed using a key supplied in advance, so it cannot be forged after the fact." This *does*
+  describe a real pre-supplied signing key — a different, keyed mechanism from this module's
+  unkeyed SHA-256 commit-reveal sealing. (An earlier draft of this note claimed the book "does
+  not confirm" a signing scheme; that was written before the book was actually read this
+  session and is now corrected.) No such key has been supplied to this project as of this
+  writing; until one is (e.g. via a course announcement or the reference repo's own Step-0
+  code — neither checked this session), this module's sealing is the most defensible
+  substitute available, but it is a real, book-confirmed deviation, not a resolved question —
+  see `docs/TODO.md`'s open flags.
 - **The wire-level Commit→Acknowledge→Reveal message exchange is not implemented.** What's
   built is the *sealing and audit* machinery (`CommitRevealLog`) — a peer now locally commits
   to every move it sends, and can later prove none of its own sealed moves were tampered with

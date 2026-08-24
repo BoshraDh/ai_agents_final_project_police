@@ -277,6 +277,14 @@ sourcing the recipient from `config/game.toml`'s `[email].recipient` and the tok
 already-live-verified `token.json`. See `docs/TODO.md`'s "Done (automatic send-report hook)"
 for the exact wiring per CLI subcommand and test coverage.
 
+## Book re-verification pass #2 — 2026-08-24 (live PDF read this session)
+The 2026-08-20 pass relied on pre-extracted text; this pass read `police_thief_p2p.pdf`
+directly, page by page, to check the two long-standing open flags (Step-0 signing key,
+commit-reveal formula deviation) and re-confirm three already-implemented parameter tables
+(`num_games`, scoring, Gatekeeper — all unchanged, all correct). See `docs/TODO.md`'s "Done
+(book re-verification pass #2)" for the exact quotes and page numbers, and
+`docs/PRD_security_crypto.md` for the corrected Step-0 design-decision note.
+
 ## Open items / flags (tracked, not silently decided)
 - `agreed_between` in `config/game.json` currently lists `"<opponent-team-code>"` as a
   placeholder — fill in the real opponent code once a match is negotiated, in both repos.
