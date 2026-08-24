@@ -26,7 +26,7 @@ class Step0Declaration:
 
     @classmethod
     def create(cls, team_code: str) -> Step0Declaration:
-        payload = {"team_code": team_code, **collect_sysinfo()}
+        payload = {"type": "system_spec", "team_code": team_code, **collect_sysinfo()}
         nonce = generate_nonce()
         commitment = compute_commitment(payload, nonce)
         return cls(payload=payload, nonce=nonce, commitment=commitment)

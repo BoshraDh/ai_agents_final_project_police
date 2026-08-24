@@ -67,7 +67,7 @@ def build_audit(
     role: Role, log: CommitRevealLog, result_claim: str, step0: Step0Declaration
 ) -> dict:
     system_record = {
-        "payload": {"type": "system_spec", **step0.payload},
+        "payload": step0.payload,
         "nonce": step0.nonce,
         "commit": step0.commitment,
     }

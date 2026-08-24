@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from bb_ai_12_police.crypto.commit_reveal import CommitRevealLog
+from bb_ai_12_police.crypto.commit_reveal import CommitRevealLog, compute_commitment
 from bb_ai_12_police.crypto.step0 import Step0Declaration
 from bb_ai_12_police.domain.pheromones import PheromoneField
 from bb_ai_12_police.domain.protocol import Position, Role
@@ -50,3 +50,18 @@ def test_build_audit_puts_a_system_spec_record_first():
     assert envelope["result_claim"] == "survival"
     assert envelope["records"][0]["payload"]["type"] == "system_spec"
     assert len(envelope["records"]) == 2
+
+
+def test_build_audit_system_record_commit_verifies_against_the_wire_payload():
+    """Regression test: a receiving auditor recomputes commit_of(payload, nonce)
+    over exactly the payload it received. The system record's "payload" must
+    therefore be byte-identical to what Step0Declaration actually sealed --
+    found live (2026-08-24) as a real audit failure against SMNGRP05 when
+    build_audit added a "type" key to the payload *after* sealing.
+    """
+    log = CommitRevealLog()
+    step0 = Step0Declaration.create("bb-ai-12")
+    envelope = build_audit(Role.POLICE, log, "capture", step0)
+    record = envelope["records"][0]
+    recomputed = compute_commitment(record["payload"], record["nonce"])
+    assert recomputed == record["commit"]

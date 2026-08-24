@@ -408,6 +408,32 @@ flags below plus re-confirm three already-implemented parameters:
       of the graded submission), since it just shells out to each repo's existing
       `league-peer` CLI in sequence and needs no protocol/runtime changes.
 
+## Done (fixed real audit-failing bug in the Step-0 system record — 2026-08-24)
+- [x] **Root cause, independently verified (not taken on the opponent's word):** SMNGRP05
+      reported, after a friendly 6/6 dry-run series, that our Step-0 declaration record failed
+      their audit's commitment check (`failed_steps: [-1]`, `35 of 36 verified`). Traced this
+      to our own code: `Step0Declaration.create()` computed `commitment` over
+      `{team_code, python_version, platform, processor, machine}`, but `build_audit()` in
+      `league/messages.py` then sent `{"type": "system_spec", **step0.payload}` over the wire
+      — adding a `"type"` key to the payload *after* it was already sealed. Reproduced
+      independently with a direct Python computation before touching any code: recomputing
+      `compute_commitment` over the actual wire payload gave a different hash than the one we
+      sent (`350b34d2...` vs `3e5f130d...`) — proof this was a real bug in our code, not a
+      trust-the-opponent's-claim situation.
+- [x] **Fix:** `Step0Declaration.create()` now includes `"type": "system_spec"` in the payload
+      *before* sealing; `build_audit()` sends `step0.payload` directly instead of re-wrapping
+      it. Principle: hash exactly what you send, send exactly what you hashed. Re-verified with
+      the same direct computation — commit now matches.
+- [x] 1 new regression test per repo
+      (`test_build_audit_system_record_commit_verifies_against_the_wire_payload`) that recomputes
+      the commitment over the actual wire payload and asserts it matches — would have caught
+      this bug before it ever reached a real opponent's auditor. 165 tests, ruff-clean, both
+      repos.
+- [x] **Deliberately did NOT apply the opponent's exact prescribed fix verbatim** (their message
+      suggested checking nonce reuse and re-serialization order as three separate possibilities)
+      — instead diagnosed the actual narrow root cause independently and applied the minimal,
+      correct fix. Their diagnosis of *what* was broken was accurate; the specific fix was ours.
+
 ## Open flag — reconcile before final submission
 - [ ] **This repo's commit-reveal formula no longer matches the book's ch.5.3 literal code
       sample.** If book-formula compliance turns out to matter more for grading than being
