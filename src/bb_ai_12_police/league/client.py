@@ -11,6 +11,14 @@ from __future__ import annotations
 from typing import Any
 
 from fastmcp import Client
+from fastmcp.client.transports import StreamableHttpTransport
+
+# Free-tier ngrok tunnels serve a browser-interstitial page instead of the
+# real response unless this header is present (any value satisfies it) --
+# found live 2026-08-24: it broke the SSE GET that opens a session, so the
+# MCP handshake died before negotiate() was ever reached, on the opponent's
+# tunnel, not ours -- see docs/TODO.md.
+_NGROK_SKIP_WARNING = {"ngrok-skip-browser-warning": "true"}
 
 
 class LeagueTransport:
@@ -21,7 +29,8 @@ class LeagueTransport:
         self._client: Client | None = None
 
     async def __aenter__(self) -> LeagueTransport:
-        self._client = Client(self.opponent_url)
+        transport = StreamableHttpTransport(self.opponent_url, headers=_NGROK_SKIP_WARNING)
+        self._client = Client(transport)
         await self._client.__aenter__()
         return self
 
