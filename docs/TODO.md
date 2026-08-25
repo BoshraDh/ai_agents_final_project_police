@@ -573,14 +573,14 @@ especially ones that arrive with prescriptive fix instructions attached.
       (`PYTHONPATH=src .venv/bin/python -m scripts.setup_league_match --role ... --public-url
       ...`) — extracted only the plain URLs; running an opponent-supplied shell command in our
       own environment has no legitimate purpose.
-- [ ] **Open, needs a decision before playing**: the kit's `SPEC.md` names two mutually-exclusive
-      pheromone-decay conventions requiring explicit agreement — `subtractive_chebyshev_v1`
-      (league default: `round(max(0, v - decay), 3)`) vs `multiplicative_book_v1` (what
-      `domain/pheromones.py` currently implements, matching the book:
-      `(1-ρ)·τ+Δτ`). Not negotiate/audit-blocking (decay model isn't one of the 14 wire terms,
-      and the crypto audit is self-consistent regardless) — but our `smell_grid` values won't
-      mean the same thing as an opponent using the league default. Same kind of trade-off as the
-      2026-08-24 commit-formula switch; not changed yet pending an explicit choice.
+- [x] **Decided (2026-08-25): keep `multiplicative_book_v1`, do not switch to the league's
+      `subtractive_chebyshev_v1` default.** The kit's `SPEC.md` names both as mutually-exclusive
+      conventions requiring explicit agreement; unlike the 2026-08-24 commit-formula switch, the
+      user chose to stay book-faithful here rather than match the league default — decay model
+      isn't one of the 14 negotiated wire terms and doesn't block negotiate/audit, only means our
+      `smell_grid` values won't mean the same thing as an opponent using the league default. If
+      this causes a real live-match issue with aviayeli or others, revisit (one-function change
+      in `domain/pheromones.py`'s `PheromoneField.step`).
 
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication
