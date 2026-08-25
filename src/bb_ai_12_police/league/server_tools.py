@@ -14,11 +14,13 @@ from fastmcp import FastMCP
 from bb_ai_12_police.league.inbox import LeagueInbox
 
 
-def add_league_tools(mcp: FastMCP, inbox: LeagueInbox) -> None:
+def add_league_tools(
+    mcp: FastMCP, inbox: LeagueInbox, negotiate_reply: dict[str, Any]
+) -> None:
     @mcp.tool
     def negotiate(message: dict[str, Any]) -> dict[str, Any]:
         inbox.receive_negotiate(message)
-        return {"ok": True}
+        return negotiate_reply
 
     @mcp.tool
     def receive_turn(message: dict[str, Any]) -> dict[str, Any]:

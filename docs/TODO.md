@@ -646,9 +646,47 @@ especially ones that arrive with prescriptive fix instructions attached.
       `[league] receive_turn reply (turn N): ...` line (matches the existing
       `[league] submit_audit reply: ...` logging style already in the
       codebase). 166 tests, ruff-clean, both repos.
-- [ ] **Next**: a second, clean friendly sub-game (us police, them thief) to
-      confirm the full alternating series settles, before moving to the real
-      graded 6-sub-game series against aviayeli.
+## Done (negotiate counter-sign — vs aviayeli, 2026-08-25 session 2)
+- [x] **Fixed: the inbound `negotiate` tool always replied `{"ok": True}`,
+      giving the opponent nothing to counter-verify us against.** aviayeli's
+      settlement record for the earlier sub-game recorded
+      `handshake_counter_signed: false` — two of their three handshake checks
+      had no terms/nonce/signature to run against on our reply. `cli/
+      league_peer.py` now precomputes `terms`/`step0`/`negotiate_reply`
+      (`{"status": "accepted", "terms", "nonce", "signature", "role",
+      "sub_game_number"}`, reusing the same nonce/signature this peer's own
+      outbound `negotiate()` call sends) and passes it into
+      `add_league_tools`, which now takes a `negotiate_reply` param instead of
+      hardcoding `{"ok": True}`. Not mandated by the kit's own SPEC.md (checked
+      directly — it leaves the negotiate reply shape unspecified, "requiring
+      explicit pair agreement"), but costs nothing and unblocks aviayeli's own
+      audit tooling.
+- [x] `tests/league/test_server_tools.py` updated: `add_league_tools` takes a
+      third arg everywhere; the negotiate test renamed and now asserts the
+      reply echoes whatever `negotiate_reply` was passed, not a hardcoded ok.
+      166 tests, ruff-clean, both repos.
+- [x] **Confirmed our earlier "404/Session terminated" report from aviayeli
+      was not a routing bug** — verified directly: our local ngrok API was not
+      even running (we'd deliberately stopped everything between sessions).
+      The 404 was ngrok's own edge serving a stale "tunnel not found" page for
+      the old hostname, not our MCP server misrouting `/mcp`. No code change
+      needed; just restart the tunnel + peer.
+- [x] **Agreed restart protocol with aviayeli**: if either side's run dies
+      mid-series, both sides restart the whole series from sub-game 1 — no
+      half-continuing. Operational agreement, not a code change; relevant
+      given neither peer can resume mid-series (this repo's `sub_game_number`
+      is always start-from-given-number, not resume-in-place).
+- [x] **Artifacts-on dry run decided**: no true "write but don't send" mode
+      exists in `report/emit.py` (only `--friendly`, which skips the report
+      entirely, or the default path, which emails the real grader address).
+      Using `--report-to <team's own email>` instead of `--friendly` for this
+      run — exercises the full build+write+email path aviayeli asked for,
+      without hitting the real course inbox, reusing the existing override
+      built for exactly this purpose (2026-08-24).
+
+- [ ] **Next**: the agreed 2-sub-game alternating dry run with aviayeli
+      (`--report-to`, not `--friendly`) — us thief/sub-game 1, us police/
+      sub-game 2 — then the real graded 6-sub-game series.
 
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication

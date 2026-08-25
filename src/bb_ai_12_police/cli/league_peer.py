@@ -20,6 +20,7 @@ from bb_ai_12_police.league.client import LeagueTransport
 from bb_ai_12_police.league.inbox import LeagueInbox
 from bb_ai_12_police.league.runtime import LeagueRuntime
 from bb_ai_12_police.league.server_tools import add_league_tools
+from bb_ai_12_police.league.terms import terms_signature, to_wire_terms
 from bb_ai_12_police.llm.resolve_provider import resolve_provider
 from bb_ai_12_police.mcp.server import build_server, run_server
 from bb_ai_12_police.peer.turn_handler import TurnHandler
@@ -52,10 +53,26 @@ def run(
     group_id = private["game"]["group_id"]
     sub_game_number = sub_game if sub_game is not None else int(private["game"]["sub_game_number"])
 
+    step0 = Step0Declaration.create(group_id)
+    terms = to_wire_terms(shared)
+    # A bare {"ok": True} negotiate reply left an opponent's handshake unable
+    # to counter-verify us (no terms/nonce/signature to check against) --
+    # found live 2026-08-25 (aviayeli's settlement record: handshake=
+    # UNVERIFIED). Reuses the same nonce/signature this peer's own outbound
+    # negotiate() call sends, so both are consistent with one real handshake.
+    negotiate_reply = {
+        "status": "accepted",
+        "terms": terms,
+        "nonce": step0.nonce,
+        "signature": terms_signature(terms, step0.nonce),
+        "role": Role.POLICE.value,
+        "sub_game_number": sub_game_number,
+    }
+
     turn_handler = TurnHandler()
     inbox = LeagueInbox()
     mcp = build_server(group_id, turn_handler)
-    add_league_tools(mcp, inbox)
+    add_league_tools(mcp, inbox, negotiate_reply)
     thread = threading.Thread(
         target=run_server, args=(mcp, "127.0.0.1", net["my_port"]), daemon=True
     )
@@ -78,7 +95,7 @@ def run(
         members=private["game"]["members"],
         transport=LeagueTransport(opponent_url or net["opponent_url"]),
         inbox=inbox,
-        step0=Step0Declaration.create(group_id),
+        step0=step0,
     )
     asyncio.run(_play(runtime, turns, sub_game_number))
     time.sleep(_SHUTDOWN_GRACE_SEC)

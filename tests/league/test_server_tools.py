@@ -18,20 +18,20 @@ def _tools(mcp: FastMCP) -> dict:
     return asyncio.run(_fetch())
 
 
-def test_negotiate_stores_the_message_and_acks():
+def test_negotiate_stores_the_message_and_replies_with_the_given_reply():
     inbox = LeagueInbox()
     mcp = FastMCP(name="test")
-    add_league_tools(mcp, inbox)
+    add_league_tools(mcp, inbox, {"status": "accepted", "nonce": "abc"})
     tools = _tools(mcp)
     reply = tools["negotiate"]({"terms": {"a": 1}})
-    assert reply == {"ok": True}
+    assert reply == {"status": "accepted", "nonce": "abc"}
     assert inbox.negotiation == {"terms": {"a": 1}}
 
 
 def test_receive_turn_stores_the_message_by_step():
     inbox = LeagueInbox()
     mcp = FastMCP(name="test")
-    add_league_tools(mcp, inbox)
+    add_league_tools(mcp, inbox, {"status": "accepted"})
     tools = _tools(mcp)
     tools["receive_turn"]({"step": 5, "hint": "hi"})
     assert inbox.wait_for_turn(5, timeout_sec=1.0)["hint"] == "hi"
@@ -40,7 +40,7 @@ def test_receive_turn_stores_the_message_by_step():
 def test_submit_audit_stores_the_payload():
     inbox = LeagueInbox()
     mcp = FastMCP(name="test")
-    add_league_tools(mcp, inbox)
+    add_league_tools(mcp, inbox, {"status": "accepted"})
     tools = _tools(mcp)
     tools["submit_audit"]({"sender": "police"})
     assert inbox.audit == {"sender": "police"}
@@ -49,6 +49,6 @@ def test_submit_audit_stores_the_payload():
 def test_receive_control_just_acks():
     inbox = LeagueInbox()
     mcp = FastMCP(name="test")
-    add_league_tools(mcp, inbox)
+    add_league_tools(mcp, inbox, {"status": "accepted"})
     tools = _tools(mcp)
     assert tools["receive_control"]({"kind": "status"}) == {"ok": True}
