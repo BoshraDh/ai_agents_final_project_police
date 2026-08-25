@@ -714,9 +714,24 @@ especially ones that arrive with prescriptive fix instructions attached.
       runner (their identity/session state not resetting or advancing between
       sub-games), not in our code and not in a general pairing/alternation
       defect on either side.
-- [ ] **Next**: waiting on aviayeli's fix for their sub-game-1→2 transition,
-      then a real 2-sub-game alternating dry run end-to-end, then the graded
-      6-sub-game series.
+- [x] **aviayeli fixed their sub-game-1→2 transition with a configurable
+      inter-sub-game pause** (`--sub-game-pause`, held session released before
+      sleeping, not after — order matters, since sleeping first would recreate
+      the earlier inbox-clear deadlock). First pause length (90s) exceeded our
+      `handshake_timeout_sec` on the wrong side of the window (their pause
+      outlived our patience); tightened to 30s once we raised our own timeout
+      (see below), landing inside their window with margin.
+- [x] **Raised our own `handshake_timeout_sec` 60s → 180s** (both repos) so an
+      opponent that deliberately pauses between sub-games doesn't get read as
+      unreachable — same precedent as the earlier 30s→60s raise.
+- [x] **First-ever full 2-sub-game series completed end-to-end, both
+      directions, both sub-game boundaries crossed cleanly**: sub-game 1 (us
+      thief) `survived`, sub-game 2 (us police) `captured`, both full 35-turn
+      games, both with mutual `submit_audit` exchange, both artifacts written
+      and emailed to `boshra2003dhamshy@gmail.com` (`--report-to`, not the
+      grader). This is the friendly dry run this whole debugging arc was
+      building toward — it's done, and it's clean.
+- [ ] **Next**: the real graded 6-sub-game series against aviayeli.
 
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication
