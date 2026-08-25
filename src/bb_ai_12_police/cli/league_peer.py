@@ -27,6 +27,15 @@ from bb_ai_12_police.report.emit import emit_report
 from bb_ai_12_police.shared.config_manager import ConfigManager
 from bb_ai_12_police.strategy.resolve_brain import resolve_brain
 
+# This process exits right after asyncio.run(_play(...)) returns and kills
+# the (daemon) server thread with it; linger briefly so the opponent's own
+# in-flight submit_audit call -- sent just after they finish their own last
+# turn -- still finds a live server instead of a dead port. Same fix already
+# applied to cli/peer.py's book-protocol path (2026-08-20); never ported to
+# this league-adapter path until now, found live 2026-08-25 (aviayeli's
+# submit_audit to us got a 502 right after our sub-game 1 finished).
+_SHUTDOWN_GRACE_SEC = 5.0
+
 
 def run(
     repo_root: str,
@@ -72,6 +81,7 @@ def run(
         step0=Step0Declaration.create(group_id),
     )
     asyncio.run(_play(runtime, turns, sub_game_number))
+    time.sleep(_SHUTDOWN_GRACE_SEC)
     if runtime.outcome is GameOutcome.ONGOING:
         return 0
     if report_to:

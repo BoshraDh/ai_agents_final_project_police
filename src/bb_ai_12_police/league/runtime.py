@@ -130,7 +130,8 @@ class LeagueRuntime:
             claim_response,
             win_claim,
         )
-        await self.transport.send_turn(message)
+        reply = await self.transport.send_turn(message)
+        print(f"[league] receive_turn reply (turn {turn}): {reply!r}")
         return self.inbox.wait_for_turn(turn, self.turn_timeout_sec)
 
     def _absorb_inbound(self, inbound: dict) -> None:
@@ -143,8 +144,10 @@ class LeagueRuntime:
 
     async def _send_audit(self) -> dict:
         result_claim = {
-            GameOutcome.CAPTURED: "capture",
-            GameOutcome.SURVIVED: "survival",
-        }.get(self.outcome, "timeout")
+            "type": {
+                GameOutcome.CAPTURED: "capture",
+                GameOutcome.SURVIVED: "survival",
+            }.get(self.outcome, "timeout")
+        }
         envelope = build_audit(self.role, self.commit_log, result_claim, self.step0)
         return await self.transport.send_audit(envelope)

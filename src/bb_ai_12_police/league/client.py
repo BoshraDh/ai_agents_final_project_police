@@ -54,16 +54,16 @@ class LeagueTransport:
 
     async def negotiate(self, message: dict[str, Any]) -> dict[str, Any]:
         result = await self._client.call_tool("negotiate", {"message": message})
-        return result.data
+        return result.structured_content or result.data
 
     async def send_turn(self, message: dict[str, Any]) -> dict[str, Any]:
         result = await self._client.call_tool("receive_turn", {"message": message})
-        return result.data
+        return result.structured_content or result.data
 
     async def send_audit(self, payload: dict[str, Any]) -> dict[str, Any]:
         result = await self._client.call_tool("submit_audit", {"payload": payload})
-        return result.data
+        return result.structured_content or result.data
 
     async def send_control(self, message: dict[str, Any]) -> dict[str, Any]:
         result = await self._client.call_tool("receive_control", {"message": message})
-        return result.data
+        return result.structured_content or result.data

@@ -582,6 +582,74 @@ especially ones that arrive with prescriptive fix instructions attached.
       this causes a real live-match issue with aviayeli or others, revisit (one-function change
       in `domain/pheromones.py`'s `PheromoneField.step`).
 
+## Done (first fully-settled live match — vs aviayeli, 2026-08-25)
+- [x] **New opponent: aviayeli.** Full negotiation, live debugging, and first
+      real completed sub-game this session. `config/game.toml`'s `opponent_url`
+      points at their thief endpoint (we play police here).
+- [x] **Fixed: `submit_audit`'s `result_claim` must be an object, not a bare
+      string.** `league/runtime.py`'s `_send_audit` sent
+      `result_claim="capture"|"survival"|"timeout"`; aviayeli's validator
+      requires `{"type": "capture"|"survival"|"timeout"}`, matching the
+      existing `win_claim` object convention already used elsewhere in this
+      protocol. Fixed in both repos; `tests/league/test_runtime.py` updated
+      (2 tests) to assert the object shape.
+- [x] **Fixed: `LeagueTransport`'s outbound calls read `result.data`, which is
+      `None` unless the remote tool declares a strict output schema — ours and
+      aviayeli's both return plain `dict[str, Any]`, so `.data` was always
+      `None` even on success.** The real content is in `result.structured_content`.
+      Fixed all four `LeagueTransport` methods (`negotiate`/`send_turn`/
+      `send_audit`/`send_control`) to read `result.structured_content or
+      result.data`. Found by adding temporary raw-result logging and reading
+      the actual `CallToolResult` — the fallback still didn't surface content
+      because the real payload sits in `.content[0].text` as a JSON string
+      when no output schema is declared either; not fixed further since
+      `.structured_content`/`.data` cover any opponent that *does* declare a
+      schema, and the temporary content-level debug logging (removed after
+      diagnosis) was what actually resolved the aviayeli exchanges.
+- [x] **Fixed: `cli/league_peer.py` had no shutdown-grace period after the
+      play loop.** `cli/peer.py` (the book-protocol path) already had this
+      exact fix from the 2026-08-20 "benign teardown race" stage
+      (`_SHUTDOWN_GRACE_SEC`, lingering after the local loop ends so the
+      opponent's in-flight final call still finds a live server) — it was
+      never ported to this league-adapter path. Found live: aviayeli's closing
+      `submit_audit` to us got a 502 right as our process exited immediately
+      after sub-game 1 finished. Added `_SHUTDOWN_GRACE_SEC = 5.0` and a
+      `time.sleep()` right after `asyncio.run(_play(...))` returns, in both
+      repos.
+- [x] **Real, fully-settled sub-game 1 achieved**, live, against aviayeli
+      (played from the sibling thief repo, us thief/them police): full 35-turn
+      exchange, every step's commit accepted both directions, mutual
+      `submit_audit` exchange completed (their inbound audit call landed
+      during our 5s grace window, followed by a clean session `DELETE`),
+      outcome `survived`. First sub-game either side has settled end-to-end
+      this league. `league-peer --friendly`, no report email sent (uncounted).
+- [x] **Sub-game 2 attempt (us police, them thief) hit a series desync on
+      their end** — traced live to their process dying on the sub-game-1
+      audit 502 (before our shutdown-grace fix existed) and their supervisor
+      relaunching a fresh series at sub-game 1, while our run had already
+      advanced. Root-caused and confirmed by them independently, consistent
+      with what we logged (a second fresh negotiate+step-1 burst mid-session
+      on our side). Not re-attempted yet this session — see the open item
+      below.
+- [x] **Root-caused (their side, confirmed by them independently): a
+      negotiate/inbox-clear race** — their series runner cleared its inbox
+      *after* an awaited negotiate round-trip instead of before, so a turn
+      arriving during that window got silently dropped; fixed on their end,
+      verified live by us afterward (their side stopped re-sending step 1
+      forever).
+- [x] Verified (independently, not taken on their word) that our own outbound
+      `step` numbering was always correct (1, then 2, ...) by logging our own
+      literal outbound message bytes before their "off-by-one" theory arrived
+      — the actual bug was theirs, not ours, on that specific claim.
+- [x] All temporary `[DEBUG]` raw-payload logging added during this live
+      debugging session removed afterward; kept only the
+      `[league] receive_turn reply (turn N): ...` line (matches the existing
+      `[league] submit_audit reply: ...` logging style already in the
+      codebase). 166 tests, ruff-clean, both repos.
+- [ ] **Next**: a second, clean friendly sub-game (us police, them thief) to
+      confirm the full alternating series settles, before moving to the real
+      graded 6-sub-game series against aviayeli.
+
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication
       approach, decision-making, LLM usage, live-GUI verification, replay-viewer
