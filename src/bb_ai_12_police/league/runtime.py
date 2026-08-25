@@ -42,7 +42,11 @@ class LeagueRuntime:
         transport: LeagueTransport,
         inbox: LeagueInbox,
         step0: Step0Declaration,
-        handshake_timeout_sec: float = 60.0,
+        # Raised 30->60->180: an opponent that deliberately pauses between
+        # sub-games (found live 2026-08-25, aviayeli's sub-game-pause fix)
+        # needs us to still be waiting when they actually dial, not give up
+        # first and read their late negotiate as a fresh failure.
+        handshake_timeout_sec: float = 180.0,
         turn_timeout_sec: float = 60.0,
     ) -> None:
         self.role = role
