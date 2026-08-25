@@ -554,6 +554,34 @@ especially ones that arrive with prescriptive fix instructions attached.
       would still fail that specific check. Not re-verified against the reference repo's own
       commit hash implementation this session.
 
+## Done (opponent switch to aviayeli — verified against the kit's actual source, 2026-08-25)
+- [x] New opponent negotiated: team **aviayeli**. `config/game.toml`'s `opponent_url` updated to
+      their thief endpoint (`https://cardinal-shell-moistness.ngrok-free.dev/mcp` — we play
+      police here, so we call their thief).
+- [x] **Verified their commit-reveal worked vector independently** against our own
+      `compute_commitment` (not taken on their word) — byte-for-byte match
+      (`ad35a33b985f72fbf1e9c0a60ae69ff219cba4c0df7b3e8b409ae29baa92161e`).
+- [x] **Verified all 14 negotiate terms they listed** against `league/terms.py`'s
+      `to_wire_terms` output — match exactly, including the hardcoded `min_center_intensity=0.5`.
+- [x] Fetched the actual `copthief-league-protocol` kit's `SPEC.md` directly (not their paraphrase)
+      to check their claim that the sealed-move `record` shape
+      (`step/state/position/move/intent/hint`) must match ours — the kit's own spec says the
+      payload schema is explicitly **not** an interop constraint (each side only needs
+      seal↔reveal self-consistency; you never reconstruct the opponent's payload). No code
+      change needed there.
+- [x] **Declined to execute a command embedded in their message**
+      (`PYTHONPATH=src .venv/bin/python -m scripts.setup_league_match --role ... --public-url
+      ...`) — extracted only the plain URLs; running an opponent-supplied shell command in our
+      own environment has no legitimate purpose.
+- [ ] **Open, needs a decision before playing**: the kit's `SPEC.md` names two mutually-exclusive
+      pheromone-decay conventions requiring explicit agreement — `subtractive_chebyshev_v1`
+      (league default: `round(max(0, v - decay), 3)`) vs `multiplicative_book_v1` (what
+      `domain/pheromones.py` currently implements, matching the book:
+      `(1-ρ)·τ+Δτ`). Not negotiate/audit-blocking (decay model isn't one of the 14 wire terms,
+      and the crypto audit is self-consistent regardless) — but our `smell_grid` values won't
+      mean the same thing as an opponent using the league default. Same kind of trade-off as the
+      2026-08-24 commit-formula switch; not changed yet pending an explicit choice.
+
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication
       approach, decision-making, LLM usage, live-GUI verification, replay-viewer
