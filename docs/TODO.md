@@ -684,9 +684,39 @@ especially ones that arrive with prescriptive fix instructions attached.
       without hitting the real course inbox, reusing the existing override
       built for exactly this purpose (2026-08-24).
 
-- [ ] **Next**: the agreed 2-sub-game alternating dry run with aviayeli
-      (`--report-to`, not `--friendly`) — us thief/sub-game 1, us police/
-      sub-game 2 — then the real graded 6-sub-game series.
+## Done (sub-game-1 solved, sub-game-2 root-caused as their bug — vs aviayeli, 2026-08-25 session 3)
+- [x] **Us-as-thief sub-game 1 (played from the sibling repo) is now solid: 3
+      for 3 clean, fully-settled runs** against aviayeli (real 35-turn games,
+      mutual `submit_audit` exchange, `handshake_counter_signed: True`
+      confirmed on their end, reports emailed to `--report-to
+      boshra2003dhamshy@gmail.com`). This direction is a solved problem.
+- [x] **Us-as-police sub-game 2 stalled 3 times in a row with the same
+      symptom** (turn 1 accepted, then a long repeating connect→negotiate→
+      disconnect cycle from their side, never advancing, `outcome: ongoing`).
+      Added temporary message-level debug logging to `league/client.py` and
+      `league/server_tools.py` (removed after diagnosis, no net diff) and
+      captured the actual payloads.
+- [x] **Root-caused with hard evidence, not assumption: our own outbound
+      negotiate and our reply to their negotiate were both consistently
+      correct** (`role: "police", sub_game_number: 2`, byte-identical across
+      every one of 9+ retries) — verified directly from our own logs, captured
+      *before* aviayeli's own explanation arrived, so not fit to their theory
+      after the fact. Their repeated inbound calls to us, in contrast,
+      self-declared stale `sub_game_number: 1, role: "police"` identity —
+      their sub-game-1 state, not sub-game-2-as-thief.
+- [x] **Ran aviayeli's proposed decisive experiment** (`--first-role thief`
+      on their end; us running a genuinely fresh, standalone sub-game 1 as
+      police against their thief) — **clean, complete result**: full 35-turn
+      game, mutual audit, report emailed (`outcome: captured`). Confirms our
+      role/alternation logic is correct in both directions when the sub-game
+      is a fresh standalone negotiate; the actual bug is specifically in
+      aviayeli's sub-game-1→2 *transition* inside their continuous supervised
+      runner (their identity/session state not resetting or advancing between
+      sub-games), not in our code and not in a general pairing/alternation
+      defect on either side.
+- [ ] **Next**: waiting on aviayeli's fix for their sub-game-1→2 transition,
+      then a real 2-sub-game alternating dry run end-to-end, then the graded
+      6-sub-game series.
 
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication
