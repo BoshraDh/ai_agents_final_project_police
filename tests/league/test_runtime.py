@@ -156,3 +156,25 @@ def test_closing_turn_does_not_burn_the_full_turn_timeout(monkeypatch):
     asyncio.run(runtime.play(1))
 
     assert seen == [_CLOSING_TURN_TIMEOUT_SEC]
+
+
+def test_negotiate_plays_on_when_only_their_turn_arrived(capsys):
+    # Their greeting for this sub-game was eaten by our previous sub-game's
+    # process; their turn proves the handshake happened. Terms are unverifiable,
+    # which is treated exactly like a mismatch -- warn, and play.
+    inbox = LeagueInbox()
+    inbox.receive_turn({"step": 1, "hint": "their opener"})
+    runtime = _runtime(inbox, _FakeTransport())
+    assert asyncio.run(runtime.negotiate(2)) is False
+    assert "playing on, terms unverified" in capsys.readouterr().out
+
+
+def test_negotiate_that_falls_back_to_a_turn_still_lets_us_send_ours():
+    # The whole point: before the fix we never sent a single turn in sub-game 2.
+    inbox = LeagueInbox()
+    inbox.receive_turn({"step": 1, "hint": "their opener"})
+    transport = _FakeTransport()
+    runtime = _runtime(inbox, transport)
+    asyncio.run(runtime.negotiate(2))
+    asyncio.run(runtime.play(1))
+    assert [t["step"] for t in transport.sent_turns] == [1]

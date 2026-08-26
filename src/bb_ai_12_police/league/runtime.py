@@ -99,7 +99,7 @@ class LeagueRuntime:
         for attempt in range(1, _NEGOTIATE_ATTEMPTS + 1):
             await self.transport.negotiate(message)
             try:
-                theirs = self.inbox.wait_for_negotiate(
+                theirs = self.inbox.wait_for_negotiate_or_turn(
                     sub_game_number, self.handshake_timeout_sec
                 )
             except TimeoutError:
@@ -115,6 +115,16 @@ class LeagueRuntime:
             # deadlocks immediately. Sub-game scoping on the greeting above is
             # the real guard; each sub-game also runs in a fresh process with
             # an empty inbox, so there is nothing stale to clear in practice.
+            if theirs is None:
+                # Their greeting was consumed by our previous sub-game's process
+                # (see `LeagueInbox.wait_for_negotiate_or_turn`). Their turn is
+                # already in our inbox, so play it: an unverifiable handshake is
+                # treated exactly like a terms mismatch, which is warn-only.
+                print(
+                    "[league] no greeting reached this process for sub-game "
+                    f"{sub_game_number}, but their turn did -- playing on, terms unverified"
+                )
+                return False
             return theirs["terms"] == terms and verify_signature(
                 theirs["terms"], theirs["nonce"], theirs["signature"]
             )

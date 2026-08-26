@@ -70,3 +70,36 @@ def test_a_turn_without_a_step_is_dropped_not_raised():
     inbox.receive_turn({"sender": "police"})
     with pytest.raises(TimeoutError):
         inbox.wait_for_turn(1, 0.05)
+
+
+def test_wait_for_negotiate_or_turn_returns_none_when_a_turn_arrives_first():
+    # The live failure this guards (2026-08-26 vs SMNGRP05, sub-game 2): the
+    # opponent's greeting was consumed by our PREVIOUS sub-game's process, which
+    # was still listening while it finished its audit. It is never re-sent, so
+    # waiting only on the greeting blocked forever while their turn 1 sat unread
+    # in this inbox.
+    inbox = LeagueInbox()
+    inbox.receive_turn({"step": 1, "hint": "their opener"})
+    assert inbox.wait_for_negotiate_or_turn(2, timeout_sec=1.0) is None
+
+
+def test_wait_for_negotiate_or_turn_prefers_the_matching_greeting():
+    inbox = LeagueInbox()
+    inbox.receive_turn({"step": 1})
+    inbox.receive_negotiate({"terms": {}, "sub_game_number": 2})
+    assert inbox.wait_for_negotiate_or_turn(2, timeout_sec=1.0) == {
+        "terms": {}, "sub_game_number": 2
+    }
+
+
+def test_wait_for_negotiate_or_turn_ignores_a_greeting_for_another_sub_game():
+    inbox = LeagueInbox()
+    inbox.receive_negotiate({"terms": {}, "sub_game_number": 3})
+    with pytest.raises(TimeoutError, match="sub-game 4"):
+        inbox.wait_for_negotiate_or_turn(4, timeout_sec=0.05, poll_interval_sec=0.01)
+
+
+def test_wait_for_negotiate_or_turn_times_out_on_total_silence():
+    inbox = LeagueInbox()
+    with pytest.raises(TimeoutError, match="timed out"):
+        inbox.wait_for_negotiate_or_turn(1, timeout_sec=0.05, poll_interval_sec=0.01)

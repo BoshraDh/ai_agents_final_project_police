@@ -1066,6 +1066,56 @@ especially ones that arrive with prescriptive fix instructions attached.
       tunnel that is not the one keeping their game state, or a reply to a call that our own
       reconnect had already moved to a new session. Not theorising further; the diff decides.
 
+## 2026-08-26 (live series, run 2) — the swallowed greeting: root cause of sub-games 2/3, found by the wire diff
+- [x] **The wire log did exactly what it was built for, on its first live use.** Sub-game 1
+      `survived (final_turn=35)` with **37 `OUT-OK` against 37 `IN`**, commits matching pairwise.
+      Sub-game 2 then failed a third time, and the diff settled it in one step instead of five
+      theories.
+- [x] **Our complete OUT list for sub-game 2** — `negotiate` and nothing else:
+      `20:06:08 OUT negotiate sub_game=2` / `20:06:08 OUT-OK ... reply={'ok': True}` /
+      `20:06:10 IN receive_turn step=1 commit=532af6fbf430` / `20:09:11 IN submit_audit` /
+      `20:09:18 OUT negotiate sub_game=2` (retry). **Zero `receive_turn` sent, all series.**
+      SMNGRP05's inbound list for the same sub-game was one line: our negotiate.
+      **The two logs agree exactly — nothing was lost on the wire, and the bug was ours.**
+- [x] **Root cause**: the opponent opens sub-game N+1 the instant their sub-game N ends, while
+      *our* sub-game N process is still finishing its audit and **still LISTENING on 8802**. So
+      their greeting is delivered to a process that is about to exit, and it is never re-sent.
+      Our fresh sub-game N+1 process then blocks in `negotiate()` waiting for a handshake that
+      already happened — while their turn 1 sits unread in its inbox.
+  - [x] **Measured, not inferred**: `20:05:42 IN negotiate sub_game=2` appears in our sub-game
+        **1** process's log; our sub-game 2 process started at 20:06:08 and timed out at 20:09.
+        The same again for sub-game 3: `20:10:42 IN negotiate sub_game=3` on the sub-game 2
+        process. Corroborated independently by the ngrok inspector's inbound record.
+- [x] **Why it looked "role-locked" to SMNGRP05** (they proposed we mishandle the first inbound
+      turn when we are police): the real pattern is **the first sub-game of a series works and
+      every later one fails**, because only the first has no previous process of ours to eat the
+      greeting. Their theory also does not fit the previous series, where sub-game 3 failed with
+      them as police. Verified before answering, per standing discipline.
+- [x] **Fix**: `LeagueInbox.wait_for_negotiate_or_turn()` — waits for the matching greeting *or*
+      any inbound turn, whichever lands first. An inbound turn is proof the opponent has
+      handshaken. `negotiate()` returns `False` in that case (terms unverifiable = treated as a
+      mismatch, which is already warn-only) and prints why, so `play()` proceeds and actually
+      sends our turns. Any buffered turn necessarily belongs to the current opponent process:
+      each sub-game starts a fresh process with an empty inbox.
+  - [x] Deliberately **not** clearing buffered turns — see the 2026-08-26 rehearsal note above;
+        that idea looks right on paper and deadlocks every sub-game.
+- [x] Regression tests both repos: greeting-or-turn returns `None` on a turn, prefers a matching
+      greeting, still ignores a greeting for another sub-game, still times out on silence; plus
+      a runtime test asserting we now actually send turn 1 in the fallback case — the exact
+      thing that never happened in sub-game 2. Police 184/184, thief 183 + the known Tk
+      environmental failure, ruff clean both.
+- [ ] **Deeper fix still open — run ONE process for the whole series, the way SMNGRP05 do.**
+      Their `MCP server for police listening on 0.0.0.0:8801` is logged once at 23:01:48 and
+      serves every sub-game; ours is a fresh `league-peer` per sub-game driven by
+      `play_series_smngrp05.sh`, and the process handoff between sub-games is what creates the
+      race above. The inbox fix makes the handoff survivable; a single long-lived peer would
+      remove it. Bigger change (per-sub-game state reset inside one process), so it is tracked
+      here rather than done mid-series.
+- [ ] **Note on `exit=127`**: an `exit=127` line appeared in the series log again — this time it
+      was **our own kill** of the running attempt, not `uv run` failing. Worth remembering
+      before attributing a future 127 to the launcher: the historical one may have been the same
+      thing.
+
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication
       approach, decision-making, LLM usage, live-GUI verification, replay-viewer

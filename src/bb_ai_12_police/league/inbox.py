@@ -50,6 +50,38 @@ class LeagueInbox:
             f"negotiate (sub-game {sub_game_number})",
         )
 
+    def wait_for_negotiate_or_turn(
+        self, sub_game_number: int, timeout_sec: float, poll_interval_sec: float = 0.05
+    ) -> dict[str, Any] | None:
+        """Their greeting, or `None` if one of their TURNS arrived first.
+
+        The opponent opens sub-game N+1 the instant their sub-game N ends, while
+        our own sub-game N process is still finishing its audit and is still
+        LISTENING on `my_port`. That greeting is therefore delivered to a process
+        which is about to exit, and it is never re-sent -- so the fresh process
+        for sub-game N+1 waits for a handshake that already happened and blocks
+        forever without ever sending a turn. Measured live 2026-08-26 vs
+        SMNGRP05: their greeting for sub-game 2 landed on our sub-game 1 process
+        at 20:05:42, our sub-game 2 process started at 20:06:08 and timed out.
+
+        An inbound turn is proof the opponent has finished their handshake, so it
+        is a valid second signal to stop waiting on. Any buffered turn belongs to
+        the current opponent process: every sub-game runs in a fresh process with
+        an empty inbox, so there is nothing older to confuse it with.
+        """
+        deadline = time.monotonic() + timeout_sec
+        while True:
+            theirs = self._negotiations.get(sub_game_number)
+            if theirs is not None:
+                return theirs
+            if self._turns:
+                return None
+            if time.monotonic() >= deadline:
+                raise TimeoutError(
+                    f"timed out waiting for opponent's negotiate (sub-game {sub_game_number})"
+                )
+            time.sleep(poll_interval_sec)
+
     def wait_for_turn(
         self, step: int, timeout_sec: float, poll_interval_sec: float = 0.05
     ) -> dict[str, Any]:

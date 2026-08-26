@@ -69,6 +69,17 @@ Survival is self-declared by the thief via `win_claim` once its own step count r
 - **`{"ok": True}` is not a distinctive reply** — `league/server_tools.py` returns the identical
   literal from our own `receive_turn`, so it never identifies whose handler ran.
 
+- **The swallowed greeting, fixed 2026-08-26.** The opponent opens sub-game N+1 as soon as their
+  sub-game N ends, while our own sub-game N process is still finishing its audit and still
+  listening on `my_port` — so their greeting reaches a process that is about to exit and is never
+  re-sent, and our fresh process for N+1 waits forever for a handshake that already happened.
+  `LeagueInbox.wait_for_negotiate_or_turn()` now stops waiting on either the matching greeting or
+  any inbound turn, since a turn proves the opponent has handshaken; the unverified-terms case is
+  treated exactly like a terms mismatch, which is warn-only. Found by diffing our `[wire]` list
+  against SMNGRP05's inbound list: ours showed `negotiate` and no `receive_turn` for the whole
+  sub-game, theirs showed our `negotiate` and nothing else — the two agreed, which is what
+  localised the defect to our side in one step.
+
 ## Explicitly out of scope / simplified
 - **Barrier placement and barrier-based capture** (`barrier_placed` field) — this repo's
   `PoliceBrain` doesn't decide barrier placement at all yet (a pre-existing gap, not new here).
