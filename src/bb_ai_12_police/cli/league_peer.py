@@ -7,8 +7,11 @@ submit_commit/submit_reveal. See `docs/PRD_league_adapter.md`.
 from __future__ import annotations
 
 import asyncio
+import os
+import sys
 import threading
 import time
+import traceback
 from pathlib import Path
 
 from bb_ai_12_police.crypto.step0 import Step0Declaration
@@ -36,6 +39,20 @@ from bb_ai_12_police.strategy.resolve_brain import resolve_brain
 # this league-adapter path until now, found live 2026-08-25 (aviayeli's
 # submit_audit to us got a 502 right after our sub-game 1 finished).
 _SHUTDOWN_GRACE_SEC = 5.0
+
+
+def _exit(code: int) -> None:
+    # The daemon MCP-server thread is supposed to die with the process, but
+    # was found live (2026-08-26 vs SMNGRP05) to sometimes leave the
+    # interpreter running after this function would otherwise return or
+    # raise -- real zombie processes stayed LISTENING on my_port minutes
+    # later, still answering a live opponent with stale state. Force a real
+    # exit instead of trusting normal shutdown. Only reached from the real
+    # CLI path -- tests always monkeypatch `league_peer.run` itself, never
+    # execute this function body, so this never fires under pytest.
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(code)
 
 
 def run(
@@ -98,10 +115,14 @@ def run(
         step0=step0,
         turn_timeout_sec=float(net["turn_timeout_seconds"]),
     )
-    asyncio.run(_play(runtime, turns, sub_game_number))
+    try:
+        asyncio.run(_play(runtime, turns, sub_game_number))
+    except Exception:  # noqa: BLE001 - print like an uncaught exception would, then hard-exit
+        traceback.print_exc()
+        _exit(1)
     time.sleep(_SHUTDOWN_GRACE_SEC)
     if runtime.outcome is GameOutcome.ONGOING:
-        return 0
+        _exit(0)
     if report_to:
         # Explicit override always wins: e.g. a validation send to the team's
         # own inboxes for an uncounted dry run, never the configured grader
@@ -109,7 +130,7 @@ def run(
         recipient = report_to
     elif friendly:
         print("[report] --friendly: skipping the automatic report email (uncounted game).")
-        return 0
+        _exit(0)
     else:
         recipient = private["email"]["recipient"]
     emit_report(
@@ -125,7 +146,7 @@ def run(
         recipient=recipient,
         token_path=Path(repo_root) / "token.json",
     )
-    return 0
+    _exit(0)
 
 
 async def _play(runtime: LeagueRuntime, turns: int, sub_game_number: int) -> None:

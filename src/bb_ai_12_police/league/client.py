@@ -52,18 +52,35 @@ class LeagueTransport:
             await self._client.__aexit__(*exc_info)
             self._client = None
 
-    async def negotiate(self, message: dict[str, Any]) -> dict[str, Any]:
-        result = await self._client.call_tool("negotiate", {"message": message})
+    async def _reconnect(self) -> None:
+        if self._client is not None:
+            try:
+                await self._client.__aexit__(None, None, None)
+            except Exception:  # noqa: BLE001 - the old session is already dead
+                pass
+            self._client = None
+        await self.__aenter__()
+
+    async def _call(self, tool: str, arg_name: str, payload: dict[str, Any]) -> dict[str, Any]:
+        # An opponent's server can terminate the underlying session between
+        # calls (found live 2026-08-26 vs SMNGRP05: negotiate succeeded, then
+        # sending turn 1 raised McpError("Session terminated")) -- reconnect
+        # once and retry instead of failing the whole sub-game outright.
+        try:
+            result = await self._client.call_tool(tool, {arg_name: payload})
+        except Exception:  # noqa: BLE001 - reconnect and retry once
+            await self._reconnect()
+            result = await self._client.call_tool(tool, {arg_name: payload})
         return result.structured_content or result.data
+
+    async def negotiate(self, message: dict[str, Any]) -> dict[str, Any]:
+        return await self._call("negotiate", "message", message)
 
     async def send_turn(self, message: dict[str, Any]) -> dict[str, Any]:
-        result = await self._client.call_tool("receive_turn", {"message": message})
-        return result.structured_content or result.data
+        return await self._call("receive_turn", "message", message)
 
     async def send_audit(self, payload: dict[str, Any]) -> dict[str, Any]:
-        result = await self._client.call_tool("submit_audit", {"payload": payload})
-        return result.structured_content or result.data
+        return await self._call("submit_audit", "payload", payload)
 
     async def send_control(self, message: dict[str, Any]) -> dict[str, Any]:
-        result = await self._client.call_tool("receive_control", {"message": message})
-        return result.structured_content or result.data
+        return await self._call("receive_control", "message", message)

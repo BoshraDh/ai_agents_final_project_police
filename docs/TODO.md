@@ -793,6 +793,39 @@ especially ones that arrive with prescriptive fix instructions attached.
       coordinate real-time with SMNGRP05 so both sides launch within the same window, rather
       than attempting blind.
 
+## Done (two more real fixes: zombie processes + session-drop resilience — 2026-08-26)
+- [x] **Real bug found while running a full 6-sub-game friendly script**: after a `league-peer`
+      invocation returned (both on a normal "ongoing" exit and on an uncaught-exception exit),
+      the OS process sometimes stayed alive, still `LISTEN`ing on `my_port` minutes later, still
+      answering a live opponent with stale in-memory state. Confirmed directly via
+      `Get-CimInstance Win32_Process` — found three-plus stale `league-peer` processes alive
+      simultaneously, one from a run that had already printed its result and "returned." This
+      independently explains a report from SMNGRP05 of discarding multiple stale negotiate
+      envelopes for old sub-game numbers — not a bug in our retry logic reusing a stale message
+      object (checked: within one `negotiate()` call the message is correctly built once per
+      sub-game, which is correct; across attempts each is a fresh process), but literally old
+      processes still running and answering.
+  - [x] **Fix**: `cli/league_peer.py`'s `run()` now wraps the play phase in try/except and calls
+        a new `_exit()` helper (`sys.exit`-through-`os._exit`, after flushing stdout/stderr) on
+        every exit path instead of `return`. Verified live: an invocation with a bogus
+        `--opponent-url` left *zero* trace in the process list immediately after, vs. multiple
+        old zombies confirmed still present from before the fix.
+  - [x] **Deliberately not placed in `cli/__init__.py`'s dispatch** — `tests/test_cli.py` calls
+        `main()` in-process with `league_peer.run` monkeypatched; an `os._exit()` there would
+        have killed the pytest process itself (this was tried, and the test run visibly
+        truncated mid-suite with no summary line — caught before committing, not shipped).
+        Placing `_exit()` inside `league_peer.run()`'s own body is safe because tests only ever
+        monkeypatch that whole function and never execute its real body.
+- [x] **Second real bug, found live in the same session**: `negotiate` succeeded ("terms
+      match"), then sending turn 1 raised `mcp.shared.exceptions.McpError: Session terminated`
+      — the opponent's server closed the session between negotiate and the first turn.
+      `LeagueTransport` had no resilience to a mid-sub-game session drop at all.
+  - [x] **Fix**: `league/client.py`'s `negotiate`/`send_turn`/`send_audit`/`send_control` now go
+        through one `_call()` helper that catches any exception, reconnects
+        (`__aexit__`+`__aenter__`), and retries the same call once before giving up.
+- [x] Full test suites pass after both fixes: 160/160 here (excluding the pre-existing
+      documented GUI/Tk environmental flake), 166/166 in the sibling thief repo.
+
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication
       approach, decision-making, LLM usage, live-GUI verification, replay-viewer
