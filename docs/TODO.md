@@ -1149,6 +1149,39 @@ especially ones that arrive with prescriptive fix instructions attached.
       cleaner architecture and would remove the greeting race at the source rather than
       absorbing it.
 
+## 2026-08-27 — opponent audit records verified; two "unknowns" were data we already had
+- [x] **Verified all 215 of SMNGRP05's sealed records from the 2026-08-26 series: 215 verified,
+      0 failed.** Recomputed `SHA256(canonical_json(payload) + "|" + nonce)` per record with this
+      repo's own `crypto/commit_reveal.py:verify_reveal` and compared against the commit they
+      published. Their sealed data came from their own `submit_audit` bodies captured on our
+      ngrok inspector, which records inbound only — their record, not a restatement of ours.
+  - [x] Our formula already matched the league kit's, so this needed **no new code** — only
+        actually running it. `audit.log_verified` moves from `null` to a measured `true`.
+- [x] **We were sitting on two fields we had reported as unknown.** SMNGRP05 pointed this out and
+      they were right:
+  - [x] Their `github_commit` `0d8c568e59f4e4ae39b3fecaf34bc477beb7f539` is in **record 0** (the
+        step-zero `system_spec`) of **every** `submit_audit` they sent — identical across all six
+        sub-games and both roles. We received it six times and never read it.
+  - [x] Their repo URLs are in the `identity` block of every inbound `negotiate`.
+  - [x] Lesson worth keeping: "not exchanged on the wire" is a claim about our own records, and
+        it needs checking against what we captured before it goes in a report.
+- [x] Three further defects in our hand-built series report, all found by SMNGRP05, all real:
+      `timezone: "Asia/Jerusalem"` declared while every stamp carried `+00:00` (copied from the
+      example template without reconciling it — the exact failure mode we claimed to avoid);
+      artifact filenames listed for a `--friendly` run that writes no artifacts; and
+      `wire_integrity` as a single scalar labelled `per_sub_game` (the value was genuinely 37 in
+      all six, which is what let it hide). All corrected in v2.
+- [ ] **Wire this into the counted path** — `emit_report()` currently reports our own outcome
+      without ever verifying the opponent's sealed records. Under the kit's rules a commit
+      mismatch is a technical loss for whoever published it, so it should be caught and recorded
+      at report time rather than left unknown. `verify_reveal` already exists; what is missing is
+      retaining the opponent's `submit_audit` payload from `LeagueInbox.audit` and running it.
+- [ ] Counted-game blockers, unchanged and still open: placeholder `[game].members` in both
+      repos; `generate_game_id` mints a **random** id per sub-game so a six-sub-game series
+      produces six unrelated `game_id`s (the convention wants one per match with `_g<NN>` per
+      sub-game); no series-level `final_game_result` builder exists at all — tonight's was hand
+      built; `league/runtime.py` (203) and `cli/league_peer.py` (160) over the 150-line cap.
+
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication
       approach, decision-making, LLM usage, live-GUI verification, replay-viewer
