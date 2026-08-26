@@ -9,7 +9,15 @@ from __future__ import annotations
 import argparse
 import sys
 
-from bb_ai_12_police.cli import check_config, declare, league_peer, peer, replay, tunnel
+from bb_ai_12_police.cli import (
+    check_config,
+    declare,
+    league_peer,
+    peer,
+    replay,
+    series_report,
+    tunnel,
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -51,10 +59,29 @@ def main(argv: list[str] | None = None) -> int:
         "mints a fresh id per sub-game, which is exactly that mixing",
     )
     league_p.add_argument(
+        "--defer-report",
+        action="store_true",
+        help="write this sub-game's artifacts but send no email: a counted series files "
+        "one match-level report at the end via `series-report`, not six per-sub-game ones",
+    )
+    league_p.add_argument(
         "--report-to",
         default=None,
         help="override the report recipient (comma-separated emails) for this run only; "
         "takes priority over --friendly, never touches config/game.toml's own recipient",
+    )
+
+    series_p = sub.add_parser(
+        "series-report", help="file ONE match-level report for a finished series"
+    )
+    series_p.add_argument("--repo-root", default=".")
+    series_p.add_argument("--game-id", required=True)
+    series_p.add_argument("--opponent-group", required=True)
+    series_p.add_argument(
+        "--report-to", default=None, help="override the recipient for this filing only"
+    )
+    series_p.add_argument(
+        "--dry-run", action="store_true", help="build and write the result, send nothing"
     )
 
     args = parser.parse_args(argv)
@@ -69,6 +96,14 @@ def main(argv: list[str] | None = None) -> int:
         return declare.run(args.repo_root)
     if args.command == "replay":
         return replay.run(args.log)
+    if args.command == "series-report":
+        return series_report.run(
+            args.repo_root,
+            args.game_id,
+            args.opponent_group,
+            args.report_to,
+            args.dry_run,
+        )
     if args.command == "league-peer":
         return league_peer.run(
             args.repo_root,
@@ -78,6 +113,7 @@ def main(argv: list[str] | None = None) -> int:
             args.friendly,
             args.report_to,
             game_id=args.game_id,
+            defer_report=args.defer_report,
         )
     return 1
 

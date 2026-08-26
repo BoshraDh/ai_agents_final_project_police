@@ -51,6 +51,12 @@ sub-games 1-6 back to back, each on its first attempt, each reaching a real outc
 `OUT=37 / OUT-OK=37 / OUT-ERR=0` on the wire in every one. Friendly and unreported, so it does
 not count toward `min_games_to_pass`; see `docs/TODO.md` for the result and the open items.
 
+✅ **New: one match-level report per counted game** (`bb-ai-12-police series-report`) — a
+counted series runs each sub-game with `league-peer --defer-report`, which writes that
+sub-game's artifacts and sends nothing; `series-report` then scores the whole match (including
+the series tie award), writes `result_<game_id>.json`, and files a single email with all
+artifacts attached. It refuses to file an incomplete match. See `docs/TODO.md`.
+
 ✅ **New: automatic end-of-game report email** — `report/emit.py` now builds the four mandatory
 JSON artifacts, writes them, and emails them to the grader (`config/game.toml`'s
 `[email].recipient`) via the already-live-verified Gmail OAuth setup, automatically whenever

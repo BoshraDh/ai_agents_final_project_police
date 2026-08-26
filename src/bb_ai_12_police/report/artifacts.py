@@ -23,10 +23,23 @@ def build_config(shared_config: dict[str, Any], game_json_sha256: str) -> dict[s
     return {"shared_config": shared_config, "shared_config_sha256": game_json_sha256}
 
 
-def build_log(game_id: str, sub_game_number: int, commit_log: CommitRevealLog) -> dict[str, Any]:
+def build_log(
+    game_id: str,
+    sub_game_number: int,
+    commit_log: CommitRevealLog,
+    outcome: GameOutcome | None = None,
+    own_role: Role | None = None,
+) -> dict[str, Any]:
+    """The per-sub-game record. Carries the sub-game's outcome as well as its
+    moves, because `result_<game_id>.json` is a MATCH-level file (book Table 20)
+    that every sub-game would otherwise overwrite -- leaving the series report
+    with no per-sub-game outcome to score from.
+    """
     return {
         "game_id": game_id,
         "sub_game_number": sub_game_number,
+        "outcome": outcome.value if outcome is not None else None,
+        "own_role": own_role.value if own_role is not None else None,
         "moves": [
             {"turn": e.turn, "payload": e.payload, "nonce": e.nonce, "commitment": e.commitment}
             for e in commit_log.entries()

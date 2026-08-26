@@ -64,6 +64,7 @@ def run(
     friendly: bool = False,
     report_to: str | None = None,
     game_id: str | None = None,
+    defer_report: bool = False,
 ) -> int:
     cfg = ConfigManager(repo_root)
     shared = cfg.load_shared()
@@ -127,7 +128,11 @@ def run(
     time.sleep(_SHUTDOWN_GRACE_SEC)
     if runtime.outcome is GameOutcome.ONGOING:
         _exit(0)
-    if report_to:
+    if defer_report:
+        # Write the artifacts, send nothing: the match-level report goes out
+        # once, from `series-report`, and only if all sub-games completed.
+        recipient = private["email"]["recipient"]
+    elif report_to:
         # Explicit override always wins: e.g. a validation send to the team's
         # own inboxes for an uncounted dry run, never the configured grader
         # address unless report_to is that address itself.
@@ -150,6 +155,7 @@ def run(
         recipient=recipient,
         token_path=Path(repo_root) / "token.json",
         game_id=game_id,
+        send=not defer_report,
     )
     _exit(0)
 

@@ -1275,6 +1275,44 @@ not from a paraphrase.
       records, and sends **one** email — only when all six completed. Until that exists a counted
       run would still send six per-sub-game emails.
 
+## 2026-08-27 — counted-report build, part 2: one match-level report, filed once
+- [x] **`report/series.py`** (121 lines): `collect_sub_game_logs`, `build_final_result`,
+      `write_final_result`, `series_attachments`, and `IncompleteSeriesError`. It scores the match
+      with `domain.scoring.score_series` (so the tie award is applied by the same code the tests
+      pin to 47-47) and emits the `final_game_result` shape.
+- [x] **`cli/series_report.py`** (109 lines) + the `series-report` subcommand: collects, scores,
+      writes the MATCH-level `result_<game_id>.json`, and sends **one** email with every artifact
+      attached. `--dry-run` builds and writes without sending. The body carries the GitHub commit
+      per mandatory rule 5 (p.140); the binding report is the attached JSON (p.78).
+- [x] **`league-peer --defer-report`**: writes this sub-game's artifacts and sends nothing.
+      `emit_report` gained `send: bool = True` for it. A counted series therefore files once at
+      the end instead of six times — the user's decision, and what the book requires (p.71).
+- [x] **Refuses to file a partial match**, verified through the real CLI: 5 of 6 sub-games ->
+      `NOT filing: 5 of 6 sub-games on disk`, exit 1; a sub-game whose outcome is `ongoing` ->
+      `never finished`, exit 1. Artifacts stay on disk and the series is replayed instead.
+- [x] **The per-sub-game outcome now lives in `log_<game_id>_g<NN>.json`.** It had nowhere
+      durable to live: `result_<game_id>.json` is a MATCH-level filename (Table 20) that every
+      sub-game's own `emit_report` overwrites, so with a stable game_id the last sub-game's
+      result was all that survived. `build_log` takes `outcome`/`own_role` and the series report
+      scores from those.
+- [x] **Caught before it could bite live: the artifacts for one match are split across TWO
+      repos.** Odd sub-games run from the thief repo and even ones from the police repo, so each
+      `logs/` holds only three. Rehearsed end to end with seeded artifacts: `series-report`
+      against the police repo alone reported `3 of 6 sub-games on disk` and refused — a counted
+      match would have played perfectly and then filed nothing. The series runner now
+      consolidates both repos' artifacts for the game_id before filing (`_gNN` names cannot
+      collide); after consolidation the same command reports 14 attachments and 47-47.
+- [x] **`play_series_smngrp05.sh` gained a counted mode**: `COUNTED=1` swaps `--friendly` for
+      `--defer-report`, consolidates, and files the match report at the end. Default stays
+      friendly.
+- [x] 201/201 both repos, ruff clean. (`tests/gui/test_replay_viewer.py` remains an
+      environmental Tk flake — it fails and passes across runs of the identical tree.)
+- [ ] **Remaining before a counted game**: wire the opponent's `submit_audit` records into the
+      filing so `opponent_audit` is measured rather than null (the verification itself is proven
+      — 215/215 on the friendly series — but it currently lives in a scratch script, not the
+      repo); split `league/runtime.py` (203) and `cli/league_peer.py` (~170) under the 150-line
+      cap; and agree with SMNGRP05 in writing that both sides file, per p.78.
+
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication
       approach, decision-making, LLM usage, live-GUI verification, replay-viewer

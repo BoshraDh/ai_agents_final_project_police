@@ -17,7 +17,8 @@ def test_check_config_runs_cleanly(capsys):
 def test_league_peer_wires_the_friendly_flag_through(monkeypatch):
     captured = {}
 
-    def fake_run(repo_root, turns, opponent_url, sub_game, friendly, report_to, game_id=None):
+    def fake_run(repo_root, turns, opponent_url, sub_game, friendly, report_to,
+                 game_id=None, defer_report=False):
         captured["friendly"] = friendly
         captured["report_to"] = report_to
         return 0
@@ -32,7 +33,8 @@ def test_league_peer_wires_the_friendly_flag_through(monkeypatch):
 def test_league_peer_defaults_friendly_to_false(monkeypatch):
     captured = {}
 
-    def fake_run(repo_root, turns, opponent_url, sub_game, friendly, report_to, game_id=None):
+    def fake_run(repo_root, turns, opponent_url, sub_game, friendly, report_to,
+                 game_id=None, defer_report=False):
         captured["friendly"] = friendly
         return 0
 
@@ -44,7 +46,8 @@ def test_league_peer_defaults_friendly_to_false(monkeypatch):
 def test_league_peer_wires_report_to_through(monkeypatch):
     captured = {}
 
-    def fake_run(repo_root, turns, opponent_url, sub_game, friendly, report_to, game_id=None):
+    def fake_run(repo_root, turns, opponent_url, sub_game, friendly, report_to,
+                 game_id=None, defer_report=False):
         captured["report_to"] = report_to
         return 0
 
@@ -59,7 +62,8 @@ def test_league_peer_wires_the_match_level_game_id_through(monkeypatch):
     # mixed". Before this, each sub-game minted its own random id.
     captured = {}
 
-    def fake_run(repo_root, turns, opponent_url, sub_game, friendly, report_to, game_id=None):
+    def fake_run(repo_root, turns, opponent_url, sub_game, friendly, report_to,
+                 game_id=None, defer_report=False):
         captured["game_id"] = game_id
         return 0
 
@@ -71,10 +75,26 @@ def test_league_peer_wires_the_match_level_game_id_through(monkeypatch):
 def test_league_peer_game_id_defaults_to_none(monkeypatch):
     captured = {}
 
-    def fake_run(repo_root, turns, opponent_url, sub_game, friendly, report_to, game_id=None):
+    def fake_run(repo_root, turns, opponent_url, sub_game, friendly, report_to,
+                 game_id=None, defer_report=False):
         captured["game_id"] = game_id
         return 0
 
     monkeypatch.setattr("bb_ai_12_police.cli.league_peer.run", fake_run)
     main(["league-peer", "--sub-game", "1"])
     assert captured["game_id"] is None
+
+
+def test_league_peer_wires_defer_report_through(monkeypatch):
+    # A counted series writes artifacts per sub-game and files ONE report at
+    # the end, so the per-sub-game send has to be suppressible.
+    captured = {}
+
+    def fake_run(repo_root, turns, opponent_url, sub_game, friendly, report_to,
+                 game_id=None, defer_report=False):
+        captured["defer_report"] = defer_report
+        return 0
+
+    monkeypatch.setattr("bb_ai_12_police.cli.league_peer.run", fake_run)
+    main(["league-peer", "--sub-game", "2", "--defer-report"])
+    assert captured["defer_report"] is True

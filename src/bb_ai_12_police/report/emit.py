@@ -43,6 +43,7 @@ def emit_report(
     recipient: str,
     token_path: Path,
     game_id: str | None = None,
+    send: bool = True,
 ) -> dict[str, Any] | None:
     """Builds and writes the four artifacts, then emails them to `recipient`.
 
@@ -58,12 +59,19 @@ def emit_report(
     game_id = game_id or generate_game_id(group_id)
     declaration = build_declaration(step0)
     config = build_config(shared_config, game_json_sha256)
-    log = build_log(game_id, sub_game_number, commit_log)
+    log = build_log(game_id, sub_game_number, commit_log, outcome, role)
     result = build_result(game_id, sub_game_number, outcome, role)
 
     attachments = write_artifacts(
         logs_dir, group_id, game_id, sub_game_number, declaration, config, log, result
     )
+
+    if not send:
+        # A counted series files ONE match-level report at the end, so the
+        # per-sub-game artifacts are written and left on disk; sending six
+        # separate emails is what `cli/series_report.py` exists to replace.
+        logger.info("emit_report: send deferred; artifacts written to %s", attachments[0].parent)
+        return None
 
     gatekeeper = TokenBucketGatekeeper.from_config(shared_config)
     subject = f"[{group_id}] game {game_id} sub-game {sub_game_number}: {outcome.value}"
