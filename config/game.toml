@@ -4,7 +4,7 @@ version = "1.0"
 group_name = "bb-ai-12"
 group_id = "bb-ai-12"
 sub_game_number = 1
-members = ["Boshra Dhamshy"]
+members = ["Boshra Dahamshy"]
 repos = { cop = "https://github.com/BoshraDh/ai_agents_final_project_police", thief = "https://github.com/BoshraDh/ai_agents_final_project_thief" }
 
 [network]
