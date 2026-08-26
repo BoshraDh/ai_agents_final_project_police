@@ -12,7 +12,7 @@ from bb_ai_12_police.domain.board import Board
 from bb_ai_12_police.domain.pheromones import PheromoneField
 from bb_ai_12_police.domain.protocol import GameOutcome, Position, Role
 from bb_ai_12_police.league.inbox import LeagueInbox
-from bb_ai_12_police.league.runtime import LeagueRuntime
+from bb_ai_12_police.league.runtime import _CLOSING_TURN_TIMEOUT_SEC, LeagueRuntime
 from bb_ai_12_police.league.terms import terms_signature, to_wire_terms
 from bb_ai_12_police.llm.template_provider import TemplateProvider
 from bb_ai_12_police.strategy.police_brain import PoliceBrain
@@ -131,3 +131,28 @@ def test_play_stays_ongoing_without_crashing_when_opponent_goes_silent():
     assert outcome == GameOutcome.ONGOING
     assert runtime.final_turn is None
     assert len(transport.sent_turns) == 1
+
+
+def test_closing_turn_does_not_burn_the_full_turn_timeout(monkeypatch):
+    """Regression test for a stall found live 2026-08-26 vs SMNGRP05.
+
+    On the agreed final step the opponent has no further turn to send us, so
+    the normal turn timeout was pure dead wait -- and it ran down *after* they
+    had already opened their own 90s audit window. With turn_timeout_sec at 180
+    our submit_audit landed ~90s too late and they recorded it as never having
+    arrived, even though their server had accepted it.
+    """
+    inbox = LeagueInbox()
+    transport = _FakeTransport()
+    runtime = _runtime(inbox, transport)
+    runtime.turn_timeout_sec = 999.0
+    seen: list[float] = []
+
+    def _spy(self, step, timeout_sec, *args, **kwargs):
+        seen.append(timeout_sec)
+        raise TimeoutError(f"turn {step}")
+
+    monkeypatch.setattr(LeagueInbox, "wait_for_turn", _spy)
+    asyncio.run(runtime.play(1))
+
+    assert seen == [_CLOSING_TURN_TIMEOUT_SEC]

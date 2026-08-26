@@ -32,6 +32,13 @@ from bb_ai_12_police.strategy.base import BrainBase
 _NEGOTIATE_ATTEMPTS = 2
 _NEGOTIATE_RETRY_DELAY_SEC = 10.0
 
+# Once we've claimed the win (or reached the agreed final step) the opponent
+# has no further turn to send us, so the normal turn timeout is pure dead wait
+# -- and it runs down AFTER they have already opened their own audit window.
+# Found live 2026-08-26: 180s here pushed our submit_audit ~90s past
+# SMNGRP05's 90s window, so they logged it as never arriving. See docs/TODO.md.
+_CLOSING_TURN_TIMEOUT_SEC = 15.0
+
 
 class LeagueRuntime:
     """One sub-game played over the league kit's wire protocol."""
@@ -106,8 +113,10 @@ class LeagueRuntime:
     async def play(self, turns: int) -> GameOutcome:
         for turn in range(1, turns + 1):
             self._play_one_turn(turn)
+            closing = self._survived_now or turn == turns
+            timeout = _CLOSING_TURN_TIMEOUT_SEC if closing else self.turn_timeout_sec
             try:
-                inbound = await self._exchange_turn(turn)
+                inbound = await self._exchange_turn(turn, timeout)
             except TimeoutError:
                 # Opponent went silent right at our own self-declared win
                 # boundary -- that doesn't undo what we already know locally.
@@ -137,7 +146,7 @@ class LeagueRuntime:
         self._hint = self.trash_talk.hint(turn)
         self._survived_now = self.role is Role.THIEF and turn >= self.survival_threshold
 
-    async def _exchange_turn(self, turn: int) -> dict:
+    async def _exchange_turn(self, turn: int, timeout_sec: float) -> dict:
         capture_claim = self.own_position if self.role is Role.POLICE else None
         claim_response = None
         if self.role is Role.THIEF and self._pending_claim is not None:
@@ -155,7 +164,7 @@ class LeagueRuntime:
         )
         reply = await self.transport.send_turn(message)
         print(f"[league] receive_turn reply (turn {turn}): {reply!r}")
-        return self.inbox.wait_for_turn(turn, self.turn_timeout_sec)
+        return self.inbox.wait_for_turn(turn, timeout_sec)
 
     def _absorb_inbound(self, inbound: dict) -> None:
         self.opponent_guess = guess_position_from_smell(

@@ -863,10 +863,27 @@ especially ones that arrive with prescriptive fix instructions attached.
 - [ ] **Operational trap to remember**: `tunnel` alone does not serve MCP — it only exposes the
       port. SMNGRP05's first 37 requests got `502 Bad Gateway` because only the tunnel was up.
       Start `league-peer` *before* telling the opponent we are live.
-- [ ] **Open question for both teams**: they report 34 steps per sub-game; `config/game.json`
-      says `max_moves: 35` / `survival_threshold: 35` and we run `--turns 35`. Our audit went
-      out ~20:02 while their 90-second audit window closed 20:00:47 — so we may also have been
-      simply *late*. Needs agreeing, not a unilateral edit.
+- [x] **Fourth real bug, and the decisive one for finishing a sub-game**: after the closing
+      turn, `play()` blocked for the full `turn_timeout_sec` (180s) waiting for an inbound turn
+      the opponent was never going to send. They stop at their own last step and immediately
+      open a 90-second audit window, so the dead wait ran down *after* that window had already
+      opened — our `submit_audit` arrived roughly 90s too late and they logged it absent.
+  - [x] **Arithmetic that confirms it**: their `submit_audit` 19:59:16, their window closed
+        20:00:47 (91s). `19:59:16 + 180s = 20:02:16`; our log file was written at **20:02**.
+        Matches to the second — this is measured, not inferred.
+  - [x] Note this would have kept the sub-game broken *even with the `sender` fix*: the audit
+        would have been correctly addressed but still outside their window.
+  - [x] **Fix**: new `_CLOSING_TURN_TIMEOUT_SEC = 15.0`. `play()` uses it instead of
+        `turn_timeout_sec` whenever `self._survived_now or turn == turns`; `_exchange_turn` now
+        takes the timeout as an argument. Regression-tested in both repos by spying on
+        `LeagueInbox.wait_for_turn` and asserting the closing wait uses the short timeout.
+- [ ] **Open question for both teams** (narrowed, no longer blocking): they report 34 steps per
+      sub-game; `config/game.json` says `max_moves: 35` / `survival_threshold: 35` and we run
+      `--turns 35`. The closing-timeout fix makes the off-by-one harmless, but the two teams
+      should still agree the number rather than either side editing it unilaterally.
+- [ ] **Pre-existing submission-compliance gap** (not introduced by today's work):
+      `league/runtime.py` is 183 lines and `cli/league_peer.py` is 157 — both over the
+      guidelines' 150-line-per-file cap. Needs a split before submission.
 - [ ] Note: `--friendly` skips `emit_report()` entirely, so **no artifacts are written to
       `logs/`** — the 2026-08-26 `survived` result left no file. Use `--report-to <own email>`
       if a friendly series should leave a record.
