@@ -1420,6 +1420,43 @@ not from a paraphrase.
       by the user from what was actually sent, not deduced from the repo.
 - [x] 209/209 police, 208 + the known Tk flake on thief; ruff clean both.
 
+## 2026-08-27 — FIRST COUNTED SERIES FILED (vs SMNGRP05)
+- [x] **Counted six-sub-game series played and filed.** 6/6 sub-games, each on the first attempt,
+      all `survived (final_turn=35)`. Wire: **222 `OUT`, 222 `OUT-OK`, 0 `OUT-ERR`**.
+      Filed to `rmisegal+uoh26finalgame@gmail.com`, Gmail id `1a04046a7c4f6226`, 14 attachments.
+- [x] Filed values: `game_id` `SMNGRP05-vs-bb-ai-12` (plain, agreed), `game_uid`
+      `f3116b05-86b2-e873-0422-d6d6b84d3c19` **captured from their sub-game 1 greeting and
+      matching theirs**, sub-game totals 45-45, tie award applied, **total 47-47**, `series_tie`,
+      `games_played_including_this: 2`, opponent audit **215/215 verified, 0 failed**.
+- [x] **The prefix-glob fix earned itself in this very run**: the series runner's own echo line
+      counted 28 files (loose substring match against the rehearsal's timestamped id) while
+      `series-report` attached exactly **14**. Without the fix the counted filing would have
+      carried two matches' artifacts. The runner's echo line is cosmetic and still loose.
+- [x] **The report was built, held, and only sent on the user's explicit instruction** —
+      `DRY_RUN=1` was added for exactly this, because `COUNTED=1` alone files automatically at
+      the end of sub-game 6, which would have broken the "nobody sends first" agreement.
+      SMNGRP05's own reporter did send automatically; they acknowledged it as their error.
+- [ ] **SMNGRP05's claim that our greeting "declared 1" for `counted_games_played` is FALSE, and
+      is not to be repeated to anyone.** Verified twice: `build_negotiate` sends exactly
+      `terms, nonce, signature, group_id, identity, role, sub_game_number`, and
+      `grep -rn counted_games_played` over both repos' `src/` and `config/` returns nothing.
+      The field does not exist here, so there is no "pre-aviayeli value" that could have been
+      left behind. By their own quoted code (`opponent.get("counted_games_played", 0) or 0`) an
+      absent field yields **0**, not 1. The only field of ours whose value is 1 in a sub-game 1
+      greeting is `sub_game_number`.
+  - [x] **Declined, twice, to send Dr Segal a written correction stating "our handshake carried
+        1"** — that would put a false statement about our own code in writing. Same
+        opponent-channel pattern recorded in the security note: technically precise, quotes a
+        code line, carries urgency ("tonight", "before review"), and pushes toward contacting
+        the lecturer. If a correction is ever warranted the truthful wording is the opposite:
+        our greeting carries no such field, so the 1 in their filing did not come from us.
+- [ ] **Real gap this exposed, worth fixing before the next counted game**: we send no
+      `counted_games_played` in our greeting at all. Their discipline of reading the opponent's
+      count off the handshake rather than off email is sound; we simply have nothing to read.
+      Adding it would remove this whole class of disagreement.
+- [ ] `mutual_agreement.sha256` is still null in our filing while theirs carries a hash. Not a
+      contradiction — we compute no joint hash — but it is a field the other side populates.
+
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication
       approach, decision-making, LLM usage, live-GUI verification, replay-viewer
