@@ -1182,6 +1182,40 @@ especially ones that arrive with prescriptive fix instructions attached.
       sub-game); no series-level `final_game_result` builder exists at all — tonight's was hand
       built; `league/runtime.py` (203) and `cli/league_peer.py` (160) over the 150-line cap.
 
+## 2026-08-27 — book §9.3 + Appendix vav Table 20 read directly; the counted-report design is now settled
+Read from `police_thief_p2p.pdf` itself (printed pp. 71, 78, 140, 141 = raw pp. 87, 94, 156, 157),
+not from a paraphrase.
+- [x] **One report per GAME, not per sub-game** (p.71): "בתום כל משחק חוקי, שני הסוכנים שולחים
+      אוטומטית את דוח הסיום אל כתובת הדואר של המרצה". The book separates `משחק` (game) from
+      `משחקון` (sub-game) consistently, and §9.3 says game. Confirms the user's decision: a single
+      email after all six sub-games, not six emails.
+- [x] **Recipient confirmed against the book** (Table 20, p.141): `rmisegal+uoh26finalgame@gmail.com`
+      — byte-identical to `config/game.toml`'s `[email].recipient` in both repos. A second address,
+      `rmisegal@gmail.com`, is for general/GitHub correspondence, not for reports.
+- [x] **Our artifact filename scheme already matches Table 20 exactly** —
+      `declaration_<game_id>.json` and `result_<game_id>.json` per game (no `_gNN`),
+      `config_<game_id>_g<NN>.json` and `log_<game_id>_g<NN>.json` per sub-game.
+      `domain/game_ids.py:artifact_filename` implements precisely this and needs no change.
+- [ ] **What IS broken is the `game_id` itself.** Table 20's rationale is explicit: "שמות הקבצים
+      נגזרים ממזהה המשחק (game_id) וממספר המשחקון (<NN>), כדי שלעולם לא יתערבבו קבצים ממשחקים
+      שונים." `generate_game_id` mints `secrets.token_hex(4)` and `emit_report` calls it once per
+      sub-game, so a six-sub-game match produces six unrelated ids — exactly the mixing the rule
+      exists to prevent. One id must be fixed for the whole match and threaded through all six.
+- [ ] **NEW, and it is not technical — mutual agreement is a precondition for scoring** (p.78,
+      mandatory box): "שתי הקבוצות חייבות להסכים על תוצאתו, וכל קבוצה חייבת לשלוח בעצמה את דוח
+      סיום המשחק אל המרצה — בנפרד... **אם לא יתקבל דוח מאחד הצדדים, אותו צד לא יזוכה בניקוד עבור
+      המשחק — גם אם ניצח על הלוח**." So before any counted game we must agree explicitly with
+      SMNGRP05 that both sides send, and agree the result afterwards. Our `mutual_agreement` field
+      being null is therefore not a cosmetic gap for a counted game.
+- [ ] **NEW — mandatory rule 5** (p.140): "לכל משחק יש לשלוח למרצה דוא״ל ובו מספר ה-Commit
+      ב-GitHub ששימש באותו משחק." The report email must carry the commit SHA used for that game.
+- [x] **The report must be machine-readable JSON as an attachment** (p.78): "כל ניסיון לשלוח דיווח
+      פתוח, שאינו קריא-מכונה (plaintext), מוביל לדחיית הדיווח." A human-readable body is fine as
+      accompaniment, but the payload is the four attached JSON files.
+- [x] **Zero-token operation is legitimate** (Table 21, p.142): `template` mode is the default and
+      is explicitly "אפס טוקנים", with the competition judged on algorithmic movement quality.
+      Our `TemplateProvider` is the sanctioned choice, not a shortcut.
+
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication
       approach, decision-making, LLM usage, live-GUI verification, replay-viewer
