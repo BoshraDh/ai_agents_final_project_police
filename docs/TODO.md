@@ -1338,6 +1338,37 @@ not from a paraphrase.
 - [ ] **Remaining**: split `league/runtime.py` (203) and `cli/league_peer.py` (~172) under the
       150-line cap, and get SMNGRP05's written agreement that both sides file (book p.78).
 
+## 2026-08-27 — counted reporting path proven end to end on a live match (rehearsal)
+- [x] **Second friendly series vs SMNGRP05, run in `COUNTED=1` mode with `REPORT_TO` pointed at
+      our own and the opponent's inboxes** — proposed by SMNGRP05 specifically to confirm both
+      teams' filings agree on the bottom line before anything counted is submitted. A plain
+      `--friendly` run could not have tested it: it skips `emit_report` entirely, so no report
+      exists to compare.
+- [x] **6/6 sub-games, each on the first attempt, all `survived (final_turn=35)`.** Wire totals
+      for the whole series: **222 `OUT`, 222 `OUT-OK`, 0 `OUT-ERR`**, no reconnects. The
+      swallowed-greeting fallback fired for sub-games 2..6 and never for 1, as designed.
+- [x] **The whole reporting path ran after a real match for the first time**: 14 artifacts
+      consolidated from BOTH repos (odd sub-games from thief, even from police), the match scored,
+      `result_<game_id>.json` written, and **one** email sent — Gmail id `1a0402a47f6492d6`.
+      The lecturer's address appeared on no recipient line.
+- [x] **Filed totals: sub-game totals 45-45, tie award applied, final 47-47**, `series_tie: true`,
+      `winner_group: null` — computed by `score_series`, matching SMNGRP05's independent filing.
+- [x] **`opponent_audit`: 215 records received, 215 verified, 0 failed — produced automatically
+      during play.** The identical total we had previously reached by hand in a scratch script
+      after filing `log_verified: null`. It is now a measured `true` in the filed JSON.
+- [x] Verified mid-run rather than only at the end: sub-game 1's
+      `log_<game_id>_g01.json` already carried `outcome`, `own_role`, 35 moves,
+      `audit_passed: true` and a per-sub-game `opponent_audit` of 35/35/0.
+- [x] `play_series_smngrp05.sh` gained `REPORT_TO`, which redirects the match report away from the
+      configured grader address and prints `MODE: COUNTED (rehearsal) ... NOT the lecturer` vs
+      `MODE: COUNTED (REAL) ...` as the first line of output, so the distinction is visible before
+      anything runs rather than buried in the code.
+- [ ] **Remaining before a counted game**: compare our filed total against SMNGRP05's for this
+      rehearsal (they file separately and send it to us), then agree the total before either side
+      submits. The 150-line split of `league/runtime.py`/`cli/league_peer.py` is deliberately
+      deferred until AFTER the counted match — it is a pure refactor of the game loop that took a
+      full night to stabilise, and it buys nothing for the match itself.
+
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication
       approach, decision-making, LLM usage, live-GUI verification, replay-viewer
