@@ -877,6 +877,23 @@ especially ones that arrive with prescriptive fix instructions attached.
         `turn_timeout_sec` whenever `self._survived_now or turn == turns`; `_exchange_turn` now
         takes the timeout as an argument. Regression-tested in both repos by spying on
         `LeagueInbox.wait_for_turn` and asserting the closing wait uses the short timeout.
+- [x] **Fifth real bug, found by running our own peers against each other**: `LeagueTransport`
+      dialled the opponent immediately on startup with `_CONNECT_ATTEMPTS = 3` at 2s apart —
+      about **6 seconds** of patience in total. The agreed coordination with SMNGRP05 is "we go
+      up first, then tell them we're live", which means our process was guaranteed to die before
+      they ever dialled. Reproduced twice locally: whichever peer started first crashed with
+      `RuntimeError: Client failed to connect: All connection attempts failed`.
+  - [x] **Fix**: first connect now retries 45 x 4s = 180s, matching `handshake_timeout_sec`.
+        Later reconnects deliberately stay short (3 x 2s) — mid-game the opponent is known to be
+        up and a 180s block would blow past their turn watchdog. Tracked by `_connected_once`.
+- [x] **End-to-end two-sided verification of all of the above** (our police repo vs our thief
+      repo, real FastMCP servers over 127.0.0.1, police temporarily on port 8803): both sides
+      independently reached `survived (final_turn=35)`, both `submit_audit` calls returned
+      `{'ok': True}`, and both agreed on the same outcome and final turn. Police config reverted
+      to `my_port = 8802` immediately afterwards; tree verified clean.
+- [ ] **Startup race remains for simultaneous local runs**: both peers must be launched within
+      the connect window of each other. Not an issue against a real opponent now that the first
+      connect waits 180s.
 - [ ] **Open question for both teams** (narrowed, no longer blocking): they report 34 steps per
       sub-game; `config/game.json` says `max_moves: 35` / `survival_threshold: 35` and we run
       `--turns 35`. The closing-timeout fix makes the off-by-one harmless, but the two teams

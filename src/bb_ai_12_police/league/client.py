@@ -21,8 +21,16 @@ from fastmcp.client.transports import StreamableHttpTransport
 # tunnel, not ours -- see docs/TODO.md.
 _NGROK_SKIP_WARNING = {"ngrok-skip-browser-warning": "true"}
 
-_CONNECT_ATTEMPTS = 3
-_CONNECT_RETRY_DELAY_SEC = 2.0
+# The FIRST connect happens while the opponent may not have started their peer
+# yet -- the agreed coordination with SMNGRP05 is "we go up first, then tell
+# them", so ~6s of retries meant our process died before they ever dialled.
+# 45 x 4s = 180s, matching `handshake_timeout_sec`. A LATER reconnect is a
+# different case (the opponent is known to be up, a session just dropped), so
+# it stays short: blocking 180s mid-game would blow past their turn watchdog.
+_CONNECT_ATTEMPTS = 45
+_CONNECT_RETRY_DELAY_SEC = 4.0
+_RECONNECT_ATTEMPTS = 3
+_RECONNECT_RETRY_DELAY_SEC = 2.0
 
 
 class LeagueTransport:
@@ -31,19 +39,25 @@ class LeagueTransport:
     def __init__(self, opponent_url: str) -> None:
         self.opponent_url = opponent_url
         self._client: Client | None = None
+        self._connected_once = False
 
     async def __aenter__(self) -> LeagueTransport:
         transport = StreamableHttpTransport(self.opponent_url, headers=_NGROK_SKIP_WARNING)
-        for attempt in range(1, _CONNECT_ATTEMPTS + 1):
+        if self._connected_once:
+            attempts, delay = _RECONNECT_ATTEMPTS, _RECONNECT_RETRY_DELAY_SEC
+        else:
+            attempts, delay = _CONNECT_ATTEMPTS, _CONNECT_RETRY_DELAY_SEC
+        for attempt in range(1, attempts + 1):
             client = Client(transport)
             try:
                 await client.__aenter__()
             except Exception:  # noqa: BLE001 - a flaky tunnel/session, retry a few times
-                if attempt == _CONNECT_ATTEMPTS:
+                if attempt == attempts:
                     raise
-                await asyncio.sleep(_CONNECT_RETRY_DELAY_SEC)
+                await asyncio.sleep(delay)
                 continue
             self._client = client
+            self._connected_once = True
             return self
         raise RuntimeError("unreachable")  # pragma: no cover
 
