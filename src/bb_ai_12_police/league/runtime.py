@@ -167,10 +167,8 @@ class LeagueRuntime:
 
     async def _send_audit(self) -> dict:
         result_claim = {
-            "type": {
-                GameOutcome.CAPTURED: "capture",
-                GameOutcome.SURVIVED: "survival",
-            }.get(self.outcome, "timeout")
-        }
-        envelope = build_audit(self.role, self.commit_log, result_claim, self.step0)
+            GameOutcome.CAPTURED: "capture",
+            GameOutcome.SURVIVED: "survival",
+        }.get(self.outcome, "timeout")
+        envelope = build_audit(self.group_id, self.commit_log, result_claim, self.step0)
         return await self.transport.send_audit(envelope)

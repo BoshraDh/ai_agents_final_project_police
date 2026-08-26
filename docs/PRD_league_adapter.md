@@ -32,7 +32,7 @@ Survival is self-declared by the thief via `win_claim` once its own step count r
 | `league/inbox.py` | Buffers inbound `negotiate`/`receive_turn`/`submit_audit` messages for the (separate-thread) game loop to poll — same blocking-wait pattern as `peer/turn_handler.py`'s `wait_for_own_reveal`. |
 | `league/server_tools.py` | Registers the 4 inbound tools on the existing FastMCP server, alongside (not replacing) `submit_commit`/`submit_reveal`. |
 | `league/client.py` | `LeagueTransport` — one persistent `Client` session per sub-game (not per call), per the kit's own guidance about free-tier tunnel rate limits. |
-| `league/messages.py` | Pure builders for the exact wire shapes SMNGRP05 specified, including the `submit_audit` record-0 `system_spec` entry and the `payload`/`message` argument-name asymmetry. |
+| `league/messages.py` | Pure builders for the exact wire shapes SMNGRP05 specified, including the `submit_audit` record-0 `system_spec` entry and the `payload`/`message` argument-name asymmetry. `build_audit` takes the **group id** (not the role) as `sender`, and `result_claim` is a bare string — exactly three keys, no more. |
 | `league/outcome.py` | Pure capture/survival detection from one inbound turn message — kept separate from `runtime.py` to stay under the 150-line cap. |
 | `league/runtime.py` | `LeagueRuntime` — the actual game loop: negotiate once, then per round decide → seal → build+send the turn message → wait for the opponent's → update the smell-based guess → check outcome. |
 | `cli/league_peer.py` | New CLI subcommand (`bb-ai-12-police league-peer --turns N --opponent-url URL`), a peer to `cli/peer.py` for this alternate protocol. |
@@ -47,6 +47,14 @@ Survival is self-declared by the thief via `win_claim` once its own step count r
   (`survived`) at the identical `final_turn` — proving the protocol is genuinely symmetric and
   correct, not just that one side's code runs.
 - 157/158 tests (police/thief), 91% coverage both, ruff-clean both.
+- **`submit_audit` sender/claim shape corrected 2026-08-26.** SMNGRP05 reported our audit never
+  arriving; independent verification showed their stated causes were all wrong (we already pass
+  the `payload` argument name, already log the tool result object rather than the HTTP status,
+  and our sub-game 1 terminated normally with `survived (final_turn=35)` after their server
+  returned `{'ok': True}` to our audit). The real defects were that `sender` carried
+  `role.value` instead of the group id — so their server accepted the call but could not match
+  the audit to us — and that `result_claim` was a dict where the kit expects a string. Both
+  fixed; regression-tested for the exact three-key shape.
 
 ## Explicitly out of scope / simplified
 - **Barrier placement and barrier-based capture** (`barrier_placed` field) — this repo's

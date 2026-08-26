@@ -64,8 +64,17 @@ def build_turn(
 
 
 def build_audit(
-    role: Role, log: CommitRevealLog, result_claim: str, step0: Step0Declaration
+    group_id: str, log: CommitRevealLog, result_claim: str, step0: Step0Declaration
 ) -> dict:
+    """The kit's audit identifies the sender by GROUP id, not by role.
+
+    Found 2026-08-26: we were sending `role.value` ("thief"/"police"), so the
+    opponent's server accepted the call (returned `{'ok': True}`) but could not
+    match the audit to us and logged it as never having arrived. `result_claim`
+    is a bare string here for the same reason -- a dict fails their validation.
+    Keep this dict at exactly three keys: theirs is built with
+    `AuditPayload(**data)`, so any extra key raises TypeError on their side.
+    """
     system_record = {
         "payload": step0.payload,
         "nonce": step0.nonce,
@@ -75,7 +84,7 @@ def build_audit(
         {"payload": e.payload, "nonce": e.nonce, "commit": e.commitment} for e in log.entries()
     ]
     return {
-        "sender": role.value,
+        "sender": group_id,
         "records": [system_record, *move_records],
         "result_claim": result_claim,
     }

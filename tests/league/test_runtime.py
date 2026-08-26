@@ -105,7 +105,7 @@ def test_play_stops_early_when_thief_confirms_caught():
     assert outcome == GameOutcome.CAPTURED
     assert runtime.final_turn == 1
     assert len(transport.sent_turns) == 1
-    assert transport.audits[0]["result_claim"] == {"type": "capture"}
+    assert transport.audits[0]["result_claim"] == "capture"
 
 
 def test_play_runs_to_the_turn_cap_when_nothing_terminal_happens():

@@ -826,6 +826,51 @@ especially ones that arrive with prescriptive fix instructions attached.
 - [x] Full test suites pass after both fixes: 160/160 here (excluding the pre-existing
       documented GUI/Tk environmental flake), 166/166 in the sibling thief repo.
 
+## 2026-08-26 — `submit_audit` sender/claim shape (third real bug found live vs SMNGRP05)
+- [x] **Context**: SMNGRP05 reported that our `submit_audit` "never reaches" them across two
+      runs, and inferred a chain (sub-game 1 never terminates → re-greeting → desync). Every
+      specific claim they gave was verified against our own code and logs first, per standing
+      discipline, and **all of them were false**:
+  - [x] "You pass `message` instead of `payload`" — false: `league/client.py` already calls
+        `self._call("submit_audit", "payload", payload)`.
+  - [x] "A 200 OK hides a tool error; log the result object" — already done: `runtime.py`
+        prints `reply!r` and prints the exception rather than swallowing it.
+  - [x] "Nothing reaches our server at all" — contradicted by our own log:
+        `[league] submit_audit reply: {'ok': True}`, a structured tool reply *from their server*.
+  - [x] "Your sub-game 1 never terminates" — false: it ended with
+        `league game outcome: survived (final_turn=35)`.
+  - [x] "Free ngrok's interstitial breaks the MCP SSE GET" — not supported: our log shows
+        their IP completing `GET /mcp HTTP/1.1" 200 OK`, and `client.py` already sends
+        `ngrok-skip-browser-warning`.
+- [x] **The two real defects, which their message did not identify**:
+  - [x] `build_audit` set `"sender": role.value` (`"thief"`/`"police"`) instead of the group id.
+        Their server accepts the call and returns `{'ok': True}`, but cannot match the audit to
+        our group — which is exactly why they log it as absent while we see success. This single
+        defect reconciles both sides' observations; neither side's stated theory did.
+  - [x] `result_claim` was a dict (`{"type": "survival"}`) where the kit expects a bare string.
+        `build_audit`'s own signature already annotated it `str`, so the code was internally
+        inconsistent independently of anything SMNGRP05 said.
+- [x] **Fix**: `build_audit` now takes `group_id`; `_send_audit` passes a plain string. Payload
+      held to exactly three keys — their `AuditPayload(**data)` raises `TypeError` on any extra
+      key, which would destroy an otherwise-valid sub-game.
+- [x] `build_turn`'s `sender` deliberately left as `role.value` — turn exchange demonstrably
+      works (35 turns, all `{'ok': True}`); changing it would risk breaking what already works.
+- [x] Checked the course PDF first as the authoritative source: 160 pages, **zero** occurrences
+      of `sender`/`negotiate`/`receive_turn`/`submit_audit`/`result_claim`. The spec is silent
+      on the league kit's 4-tool wire shape, so the kit's own shape governs here.
+- [x] Regression tests added both repos for the exact three-key shape and string claim; ruff
+      clean and 167/167 (thief) / 166 + 1 pre-existing GUI-Tcl environmental failure (police).
+- [ ] **Operational trap to remember**: `tunnel` alone does not serve MCP — it only exposes the
+      port. SMNGRP05's first 37 requests got `502 Bad Gateway` because only the tunnel was up.
+      Start `league-peer` *before* telling the opponent we are live.
+- [ ] **Open question for both teams**: they report 34 steps per sub-game; `config/game.json`
+      says `max_moves: 35` / `survival_threshold: 35` and we run `--turns 35`. Our audit went
+      out ~20:02 while their 90-second audit window closed 20:00:47 — so we may also have been
+      simply *late*. Needs agreeing, not a unilateral edit.
+- [ ] Note: `--friendly` skips `emit_report()` entirely, so **no artifacts are written to
+      `logs/`** — the 2026-08-26 `survived` result left no file. Use `--report-to <own email>`
+      if a friendly series should leave a record.
+
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication
       approach, decision-making, LLM usage, live-GUI verification, replay-viewer

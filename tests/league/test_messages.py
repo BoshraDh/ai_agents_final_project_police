@@ -45,11 +45,27 @@ def test_build_audit_puts_a_system_spec_record_first():
     log = CommitRevealLog()
     log.seal(1, {"move": "N"})
     step0 = Step0Declaration.create("bb-ai-12")
-    envelope = build_audit(Role.THIEF, log, "survival", step0)
-    assert envelope["sender"] == "thief"
+    envelope = build_audit("bb-ai-12", log, "survival", step0)
+    assert envelope["sender"] == "bb-ai-12"
     assert envelope["result_claim"] == "survival"
     assert envelope["records"][0]["payload"]["type"] == "system_spec"
     assert len(envelope["records"]) == 2
+
+
+def test_build_audit_sends_exactly_three_keys_and_a_string_claim():
+    """Regression test for two defects found live (2026-08-26) vs SMNGRP05.
+
+    `sender` carried `role.value` ("police"), so their server accepted the call
+    but could not match the audit to our group and logged it as absent; and
+    `result_claim` was a dict (`{"type": ...}`) where the kit expects a bare
+    string. A fourth key is equally fatal: their `AuditPayload(**data)` raises
+    TypeError on an unexpected key, killing an otherwise-valid sub-game.
+    """
+    log = CommitRevealLog()
+    step0 = Step0Declaration.create("bb-ai-12")
+    envelope = build_audit("bb-ai-12", log, "capture", step0)
+    assert set(envelope) == {"sender", "records", "result_claim"}
+    assert isinstance(envelope["result_claim"], str)
 
 
 def test_build_audit_system_record_commit_verifies_against_the_wire_payload():
@@ -61,7 +77,7 @@ def test_build_audit_system_record_commit_verifies_against_the_wire_payload():
     """
     log = CommitRevealLog()
     step0 = Step0Declaration.create("bb-ai-12")
-    envelope = build_audit(Role.POLICE, log, "capture", step0)
+    envelope = build_audit("bb-ai-12", log, "capture", step0)
     record = envelope["records"][0]
     recomputed = compute_commitment(record["payload"], record["nonce"])
     assert recomputed == record["commit"]
