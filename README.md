@@ -46,6 +46,11 @@ per line. An outbound call is traced before it is sent *and* when it resolves, s
 distinguishes "they answered" from "it never completed" — the basis for settling a disputed
 exchange with an opponent by diffing the two lists. See `docs/PRD_league_adapter.md`.
 
+✅ **First complete six-sub-game series against a real opponent (SMNGRP05, 2026-08-26)** —
+sub-games 1-6 back to back, each on its first attempt, each reaching a real outcome, with
+`OUT=37 / OUT-OK=37 / OUT-ERR=0` on the wire in every one. Friendly and unreported, so it does
+not count toward `min_games_to_pass`; see `docs/TODO.md` for the result and the open items.
+
 ✅ **New: automatic end-of-game report email** — `report/emit.py` now builds the four mandatory
 JSON artifacts, writes them, and emails them to the grader (`config/game.toml`'s
 `[email].recipient`) via the already-live-verified Gmail OAuth setup, automatically whenever

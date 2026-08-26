@@ -1116,6 +1116,39 @@ especially ones that arrive with prescriptive fix instructions attached.
       before attributing a future 127 to the launcher: the historical one may have been the same
       thing.
 
+## 2026-08-26 — FIRST COMPLETE SIX-SUB-GAME SERIES vs SMNGRP05 (friendly)
+- [x] **All six sub-games completed end to end in one sitting**, each on its first attempt
+      (`attempt 1/5`), each `league game outcome: survived (final_turn=35)`. This had never
+      happened before against a real opponent: every previous series died at sub-game 2.
+- [x] **Wire evidence, per sub-game: `OUT=37`, `OUT-OK=37`, `OUT-ERR=0`** — every outbound call
+      completed, none silently retried. Zero reconnects, zero duplicate inbound steps across the
+      whole series (checked, not assumed). Full log archived at
+      `logs/series_smngrp05_2026-08-26.log` (gitignored).
+- [x] **The root-cause diagnosis is confirmed by our own inbound counts.** Sub-game 1 logged
+      **two** `IN negotiate` — its own greeting plus the one for sub-game 2 arriving in its tail
+      — and sub-games 2..6 logged exactly one each, every one of them belonging to the *next*
+      sub-game. So the greeting is genuinely swallowed at every boundary, and
+      `wait_for_negotiate_or_turn` absorbed it **5 times out of 5**. The
+      `no greeting reached this process for sub-game N, but their turn did` line fired for
+      N=2,3,4,5,6 and never for N=1, exactly as predicted.
+  - [x] This satisfies the acceptance criterion SMNGRP05 named: sub-game 2 was the first test,
+        sub-game 3 the first repeat. The fix is not order-dependent.
+- [ ] **Competitive result is bad and should not be read as success**: all six ended `survived`,
+      so in the three sub-games where we played police (2, 4, 6) we **never captured the thief**
+      — 0 for 3. The protocol layer is now correct; `PoliceBrain` is the weak part and is what
+      to work on before any counted game.
+- [x] **Observation to pass on, not a claim about their code**: their police sent 34 turns in
+      sub-game 1 but 35 in sub-games 3 and 5. Both completed cleanly and neither had duplicate
+      steps, so it is an asymmetry on their side, not something we did.
+- [ ] **This series does NOT count toward `min_games_to_pass = 2`.** It ran `--friendly`, which
+      skips `emit_report()` entirely, so no artifacts were written to `logs/`. Two *counted*
+      games against a real opponent are still outstanding, and they need `--report-to` wired.
+- [ ] Still open from earlier today, unchanged by this run: `league/runtime.py` and
+      `cli/league_peer.py` exceed the 150-line cap; `[game].members` holds placeholder student
+      IDs; the single-long-lived-process design (the way SMNGRP05 run theirs) is still the
+      cleaner architecture and would remove the greeting race at the source rather than
+      absorbing it.
+
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication
       approach, decision-making, LLM usage, live-GUI verification, replay-viewer
