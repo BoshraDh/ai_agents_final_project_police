@@ -12,6 +12,7 @@ from typing import Any
 from fastmcp import FastMCP
 
 from bb_ai_12_police.league.inbox import LeagueInbox
+from bb_ai_12_police.league.wire_log import trace
 
 
 def add_league_tools(
@@ -23,19 +24,23 @@ def add_league_tools(
 
     @mcp.tool
     def negotiate(message: dict[str, Any]) -> dict[str, Any]:
+        trace("IN", "negotiate", message)
         inbox.receive_negotiate(message, own_sub_game)
         return negotiate_reply
 
     @mcp.tool
     def receive_turn(message: dict[str, Any]) -> dict[str, Any]:
+        trace("IN", "receive_turn", message)
         inbox.receive_turn(message)
         return {"ok": True}
 
     @mcp.tool
     def submit_audit(payload: dict[str, Any]) -> dict[str, Any]:
+        trace("IN", "submit_audit", payload)
         inbox.receive_audit(payload)
         return {"ok": True}
 
     @mcp.tool
     def receive_control(message: dict[str, Any]) -> dict[str, Any]:
+        trace("IN", "receive_control", message)
         return {"ok": True}

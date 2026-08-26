@@ -14,6 +14,8 @@ from typing import Any
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 
+from bb_ai_12_police.league.wire_log import note, trace
+
 # Free-tier ngrok tunnels serve a browser-interstitial page instead of the
 # real response unless this header is present (any value satisfies it) --
 # found live 2026-08-24: it broke the SSE GET that opens a session, so the
@@ -80,11 +82,19 @@ class LeagueTransport:
         # calls (found live 2026-08-26 vs SMNGRP05: negotiate succeeded, then
         # sending turn 1 raised McpError("Session terminated")) -- reconnect
         # once and retry instead of failing the whole sub-game outright.
+        #
+        # This retry used to be entirely silent, which was a real blind spot:
+        # a reconnect opens a BRAND-NEW MCP session, so a call that succeeds on
+        # the retry can land somewhere different from where the earlier calls
+        # in this sub-game went, and we would log only the success. Trace it.
+        trace("OUT", tool, payload)
         try:
             result = await self._client.call_tool(tool, {arg_name: payload})
-        except Exception:  # noqa: BLE001 - reconnect and retry once
+        except Exception as exc:  # noqa: BLE001 - reconnect and retry once
+            note(f"{tool} raised {exc!r}; reconnecting (NEW session) and retrying once")
             await self._reconnect()
             result = await self._client.call_tool(tool, {arg_name: payload})
+            note(f"{tool} succeeded on the retry, on a different session")
         return result.structured_content or result.data
 
     async def negotiate(self, message: dict[str, Any]) -> dict[str, Any]:

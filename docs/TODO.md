@@ -977,6 +977,35 @@ especially ones that arrive with prescriptive fix instructions attached.
       has already gone. They are NOT listening, so they cannot answer an opponent with stale
       state — the actual historical harm — and `free_port()` in the series runner kills any
       `league-peer` by command line before every attempt. Worth chasing before submission.
+- [x] **My 404 root-cause claim for sub-games 2 and 3 was WRONG, and is retracted.** I told
+      SMNGRP05 the 404 caused a lost turn that offset both step counters, they accepted it, and
+      the series was paused on that basis. The complete inbound log does not support it: in both
+      sub-games their 404'd turn was **re-sent successfully within two seconds**, so nothing was
+      permanently lost -- which is precisely what the off-by-one theory required.
+  - [x] What our own tunnel log actually shows they sent us:
+        sub-game 2 `step1 -> 404`, `step1 -> 200`, nothing more;
+        sub-game 3 `step1 -> 404`, `step1 -> 200`, `step2 -> 200`, nothing more.
+        Our timeouts land exactly on their audit timestamps (21:37:37, 21:47:55).
+  - [x] I then proposed their echo-consumption bug as the cause. **Also unsupported** -- their
+        runtime prints a line on every duplicate drop and there were zero across the whole run.
+  - [x] **Root cause of sub-games 2 and 3 is currently UNKNOWN.** There is a hard contradiction
+        still unresolved: they counted 2 inbound calls in sub-game 2, we made 4 (negotiate, two
+        turns, audit) and their `receive_turn` returned `{'ok': True}` to both turns -- a reply
+        that can only come from their tool actually executing. Both logs cannot be right.
+- [x] **Our own blind spot, found while investigating the above**: `LeagueTransport._call`
+      caught *any* exception, reconnected and retried **completely silently**. A reconnect opens
+      a brand-new MCP session, so a call that succeeds on the retry can land somewhere other
+      than where the sub-game's earlier calls went, and we would log only the success. This
+      could by itself explain "we got `ok: True` but their game never saw it".
+  - [x] **Fix**: new `league/wire_log.py`. Every tool call is traced in both directions --
+        `[wire] <utc-ms> OUT|IN <tool> step=N sub_game=N commit=<12 chars>` -- and reconnects
+        are now announced instead of swallowed. Flushed per line, because stdout is
+        block-buffered when redirected, which is why our own turn counts appeared to lag during
+        the live sub-games. Agreed with SMNGRP05 as the way to settle it: diff the two lists.
+        In our OUT but not their IN -> the wire; in both but unacted -> their side; never in our
+        OUT -> ours.
+  - [x] Verified locally: every `OUT` on one peer appears as an `IN` on the other with a
+        matching commit prefix.
 - [ ] **Open question for both teams** (narrowed, no longer blocking): they report 34 steps per
       sub-game; `config/game.json` says `max_moves: 35` / `survival_threshold: 35` and we run
       `--turns 35`. The closing-timeout fix makes the off-by-one harmless, but the two teams
