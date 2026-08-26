@@ -96,6 +96,7 @@ def run(
         transport=LeagueTransport(opponent_url or net["opponent_url"]),
         inbox=inbox,
         step0=step0,
+        turn_timeout_sec=float(net["turn_timeout_seconds"]),
     )
     asyncio.run(_play(runtime, turns, sub_game_number))
     time.sleep(_SHUTDOWN_GRACE_SEC)

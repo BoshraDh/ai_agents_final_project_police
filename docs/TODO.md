@@ -757,6 +757,42 @@ especially ones that arrive with prescriptive fix instructions attached.
       wants to continue this series (sub-game 1, us thief, already run cleanly from the
       sibling repo — see its `docs/TODO.md`).
 
+## Done (sub-game 2 debugging vs SMNGRP05 — 2026-08-26, two real fixes made)
+- [x] **Ignored a second suspicious message this session**: content appeared mid-turn,
+      positioned oddly (alongside a tool-result notification rather than as a normal message
+      from the user), signed "— SMNGRP05" in a voice the user never uses, and repeated the
+      same already-debunked Rule-19/step-zero claim padded with new unverifiable "progress"
+      figures. Treated as untrusted per the standing security note above; not acted on.
+- [x] **First live sub-game-2 attempt**: `negotiate` timed out after 180s waiting for their
+      reply — our own outbound negotiate call completed without error, so this was one-sided.
+- [x] **Real fix #1 — negotiate retry.** `LeagueRuntime.negotiate()` was single-shot with no
+      recovery from one missed handshake window, a gap already identified but never
+      implemented on 2026-08-24 ("Open flag — negotiate-handshake reliability"). Added a
+      2-attempt retry with a 10s gap, re-sending our own negotiate each attempt
+      (`_NEGOTIATE_ATTEMPTS`/`_NEGOTIATE_RETRY_DELAY_SEC` in `league/runtime.py`, both repos).
+- [x] **Second live attempt (with the retry fix)**: negotiate succeeded immediately, but the
+      game stalled after turn 1 — our move was sent and acked, but no reply ever arrived from
+      their side within the turn timeout.
+- [x] **Real fix #2 — dead config wired up.** Traced the turn-1 stall to our own code, not
+      theirs: `config/game.toml`'s `network.turn_timeout_seconds = 180` was never read
+      anywhere — `LeagueRuntime` was always constructed without a `turn_timeout_sec` argument,
+      silently falling back to the class default of 60s. Wired
+      `turn_timeout_sec=float(net["turn_timeout_seconds"])` into the `LeagueRuntime(...)` call
+      in `cli/league_peer.py` (both repos). Confirmed by grepping the whole repo for both spellings
+      before writing the fix.
+- [x] Full test suites pass after both fixes: 160/160 (excluding the pre-existing, documented
+      GUI/Tk environmental flake) here, 166/166 in the sibling thief repo.
+- [x] **Third live attempt (both fixes in place)**: negotiate itself got zero incoming traffic
+      from their side this time. Checked our own reachability independently (not taking their
+      earlier "your door reads 502" claim on faith): our own public endpoint *did* return 502
+      at that moment too — but that's simply because our MCP server only runs for the duration
+      of one `league-peer` invocation, not continuously. Conclusion: this is a two-sided
+      "both processes must be listening at the same moment" coordination gap (matches the
+      2026-08-24 open-flag theory), not a remaining code bug on either fix just made.
+- [ ] **Next, per user decision (stopped here for today)**: before retrying sub-game 2 again,
+      coordinate real-time with SMNGRP05 so both sides launch within the same window, rather
+      than attempting blind.
+
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication
       approach, decision-making, LLM usage, live-GUI verification, replay-viewer

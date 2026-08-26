@@ -6,6 +6,8 @@ each side's brain is fed a best-guess position from `league/smell.py`.
 
 from __future__ import annotations
 
+import asyncio
+
 from bb_ai_12_police.crypto.commit_reveal import CommitRevealLog
 from bb_ai_12_police.crypto.step0 import Step0Declaration
 from bb_ai_12_police.domain.barriers import BarrierSet
@@ -20,6 +22,15 @@ from bb_ai_12_police.league.smell import guess_position_from_smell
 from bb_ai_12_police.league.terms import terms_signature, to_wire_terms, verify_signature
 from bb_ai_12_police.llm.provider_base import TrashTalkProvider
 from bb_ai_12_police.strategy.base import BrainBase
+
+# A single-shot negotiate attempt was found live (2026-08-24, independently
+# confirmed via a role-swapped control test, not the opponent's diagnosis)
+# to fail whenever a sub-game is launched immediately after the previous one
+# -- correlated with launch timing, not role or transport. No retry existed
+# to recover from a single missed window; add one instead of relying on a
+# manual re-run.
+_NEGOTIATE_ATTEMPTS = 2
+_NEGOTIATE_RETRY_DELAY_SEC = 10.0
 
 
 class LeagueRuntime:
@@ -78,11 +89,19 @@ class LeagueRuntime:
         message = build_negotiate(
             terms, nonce, signature, self.group_id, self.members, self.role.value, sub_game_number
         )
-        await self.transport.negotiate(message)
-        theirs = self.inbox.wait_for_negotiate(self.handshake_timeout_sec)
-        return theirs["terms"] == terms and verify_signature(
-            theirs["terms"], theirs["nonce"], theirs["signature"]
-        )
+        for attempt in range(1, _NEGOTIATE_ATTEMPTS + 1):
+            await self.transport.negotiate(message)
+            try:
+                theirs = self.inbox.wait_for_negotiate(self.handshake_timeout_sec)
+            except TimeoutError:
+                if attempt == _NEGOTIATE_ATTEMPTS:
+                    raise
+                await asyncio.sleep(_NEGOTIATE_RETRY_DELAY_SEC)
+                continue
+            return theirs["terms"] == terms and verify_signature(
+                theirs["terms"], theirs["nonce"], theirs["signature"]
+            )
+        raise RuntimeError("unreachable")  # pragma: no cover
 
     async def play(self, turns: int) -> GameOutcome:
         for turn in range(1, turns + 1):
