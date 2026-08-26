@@ -156,6 +156,7 @@ def run(
         token_path=Path(repo_root) / "token.json",
         game_id=game_id,
         send=not defer_report,
+        opponent_audit_payload=runtime.inbox.audit,
     )
     _exit(0)
 

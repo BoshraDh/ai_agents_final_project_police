@@ -51,7 +51,6 @@ def build_final_result(
     opponent_group: str,
     sub_game_logs: list[dict[str, Any]],
     expected_sub_games: int,
-    opponent_audit: dict[str, int] | None = None,
 ) -> dict[str, Any]:
     """The match-level `final_game_result`, scored from the per-sub-game logs.
 
@@ -82,6 +81,7 @@ def build_final_result(
                 "result": outcome.value,
                 "score": scores,
                 "our_records_verified": log.get("audit_passed"),
+                "opponent_audit": log.get("opponent_audit"),
                 "log_file": artifact_filename("log", game_id, number),
             }
         )
@@ -102,7 +102,30 @@ def build_final_result(
             "winner_group": series.winner_group,
             "series_tie": series.series_tie,
         },
-        "opponent_audit": opponent_audit,
+        "opponent_audit": _aggregate_opponent_audit(sub_game_logs),
+    }
+
+
+def _aggregate_opponent_audit(sub_game_logs: list[dict[str, Any]]) -> dict[str, Any]:
+    """Series totals for the opponent's sealed records, summed from the sub-games.
+
+    `all_verified` is true only when records were actually seen AND none failed,
+    so a series where the opponent's audit never arrived reports `None` rather
+    than a clean-looking true.
+    """
+    received = verified = failed = 0
+    seen_any = False
+    for log in sub_game_logs:
+        audit = log.get("opponent_audit") or {}
+        received += audit.get("received", 0)
+        verified += audit.get("verified", 0)
+        failed += audit.get("failed", 0)
+        seen_any = seen_any or audit.get("all_verified") is not None
+    return {
+        "records_received": received,
+        "records_verified": verified,
+        "records_failed": failed,
+        "all_verified": (received > 0 and failed == 0) if seen_any else None,
     }
 
 

@@ -12,7 +12,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from bb_ai_12_police.crypto.commit_reveal import CommitRevealLog
+from bb_ai_12_police.crypto.commit_reveal import CommitRevealLog, verify_opponent_records
 from bb_ai_12_police.crypto.step0 import Step0Declaration
 from bb_ai_12_police.domain.game_ids import generate_game_id
 from bb_ai_12_police.domain.protocol import GameOutcome, Role
@@ -44,6 +44,7 @@ def emit_report(
     token_path: Path,
     game_id: str | None = None,
     send: bool = True,
+    opponent_audit_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """Builds and writes the four artifacts, then emails them to `recipient`.
 
@@ -59,7 +60,8 @@ def emit_report(
     game_id = game_id or generate_game_id(group_id)
     declaration = build_declaration(step0)
     config = build_config(shared_config, game_json_sha256)
-    log = build_log(game_id, sub_game_number, commit_log, outcome, role)
+    opponent_audit = verify_opponent_records(opponent_audit_payload)
+    log = build_log(game_id, sub_game_number, commit_log, outcome, role, opponent_audit)
     result = build_result(game_id, sub_game_number, outcome, role)
 
     attachments = write_artifacts(

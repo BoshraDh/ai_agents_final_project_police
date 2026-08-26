@@ -125,3 +125,61 @@ def test_attachments_gather_every_file_for_this_game_only(tmp_path):
     assert f"declaration_{GAME}.json" in names
     assert len([n for n in names if n.startswith("log_")]) == 6
     assert "log_some-other-game_g01.json" not in names
+
+
+def _log_with_audit(number: int, received: int, failed: int = 0) -> dict:
+    entry = _log(number)
+    entry["opponent_audit"] = {
+        "received": received,
+        "verified": received - failed,
+        "failed": failed,
+        "all_verified": failed == 0,
+    }
+    return entry
+
+
+def _write(tmp_path, logs):
+    target = tmp_path / US
+    target.mkdir(parents=True, exist_ok=True)
+    for entry in logs:
+        n = entry["sub_game_number"]
+        (target / f"log_{GAME}_g{n:02d}.json").write_text(json.dumps(entry), encoding="utf-8")
+    return collect_sub_game_logs(tmp_path, US, GAME)
+
+
+def test_opponent_audit_totals_are_summed_across_the_series(tmp_path):
+    # The real 2026-08-26 shape: 35 records in sub-game 1 and 36 in each of the
+    # rest, 215 in total, none failing.
+    logs = _write(
+        tmp_path, [_log_with_audit(1, 35)] + [_log_with_audit(n, 36) for n in range(2, 7)]
+    )
+
+    report = build_final_result(GAME, US, THEM, logs, expected_sub_games=6)
+
+    assert report["opponent_audit"] == {
+        "records_received": 215,
+        "records_verified": 215,
+        "records_failed": 0,
+        "all_verified": True,
+    }
+
+
+def test_one_failed_opponent_record_makes_the_series_audit_false(tmp_path):
+    logs = _write(
+        tmp_path,
+        [_log_with_audit(1, 36, failed=1)] + [_log_with_audit(n, 36) for n in range(2, 7)],
+    )
+
+    report = build_final_result(GAME, US, THEM, logs, expected_sub_games=6)
+
+    assert report["opponent_audit"]["records_failed"] == 1
+    assert report["opponent_audit"]["all_verified"] is False
+
+
+def test_an_audit_that_never_arrived_reports_unknown_not_verified(tmp_path):
+    logs = _write(tmp_path, [_log(n) for n in range(1, 7)])
+
+    report = build_final_result(GAME, US, THEM, logs, expected_sub_games=6)
+
+    assert report["opponent_audit"]["all_verified"] is None
+    assert report["opponent_audit"]["records_received"] == 0

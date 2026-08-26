@@ -75,3 +75,37 @@ class CommitRevealLog:
     def entries(self) -> list[SealedMove]:
         """Read-only snapshot of the sealed moves, for building report artifacts."""
         return list(self._entries)
+
+
+def verify_opponent_records(audit_payload: dict[str, Any] | None) -> dict[str, Any]:
+    """Re-hash an opponent's sealed records and check them against their commits.
+
+    This is the whole point of commit-reveal, and it was being skipped: we filed
+    `log_verified: null` for a series whose 215 records all verified when finally
+    checked by hand. Each record carries `payload`, `nonce` and `commit`; a
+    mismatch means the revealed move is not the one that was committed.
+
+    Returns counts rather than raising: a filing records what was found, and a
+    malformed or absent audit is reported as such rather than crashing the peer
+    after a real game outcome.
+    """
+    if not audit_payload:
+        return {"received": 0, "verified": 0, "failed": 0, "all_verified": None}
+    records = audit_payload.get("records") or []
+    verified = failed = 0
+    for record in records:
+        try:
+            ok = verify_reveal(record["payload"], record["nonce"], record["commit"])
+        except (KeyError, TypeError):
+            failed += 1
+            continue
+        verified += ok
+        failed += not ok
+    return {
+        "received": len(records),
+        "verified": verified,
+        "failed": failed,
+        # No records is "unknown", not "failed": an audit that never arrived
+        # must never read as a clean verification.
+        "all_verified": (failed == 0) if records else None,
+    }

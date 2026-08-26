@@ -9,6 +9,7 @@ from bb_ai_12_police.crypto.commit_reveal import (
     canonical_json,
     compute_commitment,
     generate_nonce,
+    verify_opponent_records,
     verify_reveal,
 )
 
@@ -79,3 +80,44 @@ def test_entries_returns_a_snapshot_not_a_live_view():
     log.seal(2, {"direction": "S", "turn": 2})
     assert len(snapshot) == 1
     assert len(log.entries()) == 2
+
+
+def _their_records(count: int) -> list[dict]:
+    """Records shaped exactly as SMNGRP05's `submit_audit` sends them."""
+    log = CommitRevealLog()
+    for turn in range(1, count + 1):
+        log.seal(turn, {"step": turn, "direction": "N"})
+    return [
+        {"payload": e.payload, "nonce": e.nonce, "commit": e.commitment}
+        for e in log.entries()
+    ]
+
+
+def test_verify_opponent_records_accepts_an_untampered_audit():
+    result = verify_opponent_records({"sender": "SMNGRP05", "records": _their_records(35)})
+    assert result == {"received": 35, "verified": 35, "failed": 0, "all_verified": True}
+
+
+def test_verify_opponent_records_catches_a_tampered_payload():
+    # The point of commit-reveal: the revealed move is not the committed one.
+    records = _their_records(3)
+    records[1]["payload"] = {"step": 2, "direction": "S"}
+    result = verify_opponent_records({"records": records})
+    assert result["verified"] == 2
+    assert result["failed"] == 1
+    assert result["all_verified"] is False
+
+
+def test_verify_opponent_records_reports_a_missing_audit_as_unknown():
+    # Not "clean": an audit that never arrived must not read as verified.
+    assert verify_opponent_records(None)["all_verified"] is None
+    assert verify_opponent_records({"records": []})["all_verified"] is None
+
+
+def test_verify_opponent_records_counts_a_malformed_record_without_crashing():
+    records = _their_records(2)
+    records.append({"payload": {"step": 3}})  # no nonce, no commit
+    result = verify_opponent_records({"records": records})
+    assert result["received"] == 3
+    assert result["verified"] == 2
+    assert result["failed"] == 1

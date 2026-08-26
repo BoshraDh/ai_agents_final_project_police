@@ -1313,6 +1313,31 @@ not from a paraphrase.
       repo); split `league/runtime.py` (203) and `cli/league_peer.py` (~170) under the 150-line
       cap; and agree with SMNGRP05 in writing that both sides file, per p.78.
 
+## 2026-08-27 — counted-report build, part 3: the opponent's records are verified by the repo
+- [x] **`crypto/commit_reveal.py:verify_opponent_records()`** — re-hashes every record of an
+      opponent's `submit_audit` and checks it against the commit they published, returning
+      `{received, verified, failed, all_verified}`. It reports counts instead of raising: a
+      filing should record what was found, not crash a peer that already has a real outcome.
+- [x] **Wired end to end**: `league-peer` passes `runtime.inbox.audit` into `emit_report`, which
+      verifies it and stores the result in that sub-game's `log_<game_id>_g<NN>.json`;
+      `report/series.py` sums the six into a series-level `opponent_audit`. So a counted filing
+      now carries a measured verification instead of the `null` we filed for the friendly.
+- [x] **Checked against SMNGRP05's real data through the repo's own code**, not a scratch
+      script: their six captured `submit_audit` bodies from the 2026-08-26 series give
+      35+36+36+36+36+36 = **215 records, 215 verified, 0 failed** — identical to the by-hand
+      result, now reproducible from the repo.
+- [x] **A test caught a real semantic bug in my first implementation**: an audit with an empty
+      record list returned `all_verified: False`, which reads as "verification failed" when it
+      means "nothing arrived". Now `None` for no records — an audit that never arrived must
+      never read as clean. Same rule applied to the series aggregate.
+- [x] Tests added both repos: an untampered 35-record audit verifies; a tampered payload is
+      caught (`verified=2, failed=1`); a missing or empty audit reports unknown; a malformed
+      record is counted rather than crashing; series totals sum to 215 and a single failure
+      flips `all_verified` to false.
+- [x] 208/208 both repos, ruff clean.
+- [ ] **Remaining**: split `league/runtime.py` (203) and `cli/league_peer.py` (~172) under the
+      150-line cap, and get SMNGRP05's written agreement that both sides file (book p.78).
+
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication
       approach, decision-making, LLM usage, live-GUI verification, replay-viewer
