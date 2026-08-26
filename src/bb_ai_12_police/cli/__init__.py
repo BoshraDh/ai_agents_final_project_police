@@ -43,6 +43,14 @@ def main(argv: list[str] | None = None) -> int:
         help="uncounted practice game: skip the automatic end-of-game report email",
     )
     league_p.add_argument(
+        "--game-id",
+        default=None,
+        help="the match's game_id, shared by every sub-game of one series. The book's "
+        "Table 20 derives every artifact filename from ONE game_id plus the sub-game "
+        "number, 'so that files from different games are never mixed'; omitting this "
+        "mints a fresh id per sub-game, which is exactly that mixing",
+    )
+    league_p.add_argument(
         "--report-to",
         default=None,
         help="override the report recipient (comma-separated emails) for this run only; "
@@ -69,6 +77,7 @@ def main(argv: list[str] | None = None) -> int:
             args.sub_game,
             args.friendly,
             args.report_to,
+            game_id=args.game_id,
         )
     return 1
 

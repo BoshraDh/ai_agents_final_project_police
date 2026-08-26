@@ -42,6 +42,7 @@ def emit_report(
     game_json_sha256: str,
     recipient: str,
     token_path: Path,
+    game_id: str | None = None,
 ) -> dict[str, Any] | None:
     """Builds and writes the four artifacts, then emails them to `recipient`.
 
@@ -49,7 +50,12 @@ def emit_report(
     non-fatal -- a report failure must never crash a peer process after a
     real game outcome; the artifacts are already safely on disk by then).
     """
-    game_id = generate_game_id(group_id)
+    # One game_id per MATCH, not per sub-game. Table 20 (book p.141) derives every
+    # artifact filename from the game_id plus the sub-game number precisely "so
+    # that files from different games are never mixed" -- minting a fresh random
+    # id inside each sub-game produced six unrelated ids for one six-sub-game
+    # series. A caller that has no series context still gets one generated.
+    game_id = game_id or generate_game_id(group_id)
     declaration = build_declaration(step0)
     config = build_config(shared_config, game_json_sha256)
     log = build_log(game_id, sub_game_number, commit_log)

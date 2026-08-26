@@ -63,6 +63,7 @@ def run(
     sub_game: int | None,
     friendly: bool = False,
     report_to: str | None = None,
+    game_id: str | None = None,
 ) -> int:
     cfg = ConfigManager(repo_root)
     shared = cfg.load_shared()
@@ -148,6 +149,7 @@ def run(
         game_json_sha256=cfg.game_json_sha256(),
         recipient=recipient,
         token_path=Path(repo_root) / "token.json",
+        game_id=game_id,
     )
     _exit(0)
 

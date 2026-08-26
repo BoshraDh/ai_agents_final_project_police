@@ -1249,6 +1249,32 @@ not from a paraphrase.
       field can be read as a contradicting pair, and a counted tie between us is not hypothetical
       — tonight came out exactly level, and both police strategies still convert nothing.
 
+## 2026-08-27 — counted-report build, part 1 of 2: series scoring and a match-level game_id
+- [x] **`domain/scoring.py` extended, not replaced** — `score_series()` sums the sub-games and
+      then applies `TIE_SCORE` once to BOTH sides when the match is level, and
+      `sub_game_scores()` keys one sub-game's points by group id. A sub-game whose mapping is
+      missing one of the two groups raises instead of silently scoring that side zero.
+      `score_for`/`scores_for_both` and their tests are untouched.
+  - [x] Regression test runs the real 2026-08-26 series and asserts **47-47, not 45-45** — the
+        exact number we filed wrongly.
+- [x] **One `game_id` per MATCH** (book Table 20, p.141: filenames derive from the game_id plus
+      the sub-game number "so that files from different games are never mixed"; mandatory rule 3,
+      p.140, requires a distinct name per game).
+  - [x] New `--game-id` on `league-peer`, threaded `cli/__init__.py` -> `league_peer.run()` ->
+        `emit_report()`, which now takes `game_id: str | None` and only mints one when the caller
+        has no series context. Default behaviour for a standalone run is unchanged.
+  - [x] `play_series_smngrp05.sh` computes it once
+        (`SMNGRP05-vs-bb-ai-12-<UTC yyyymmdd-hhmm>`, overridable via `$GAME_ID`) and passes the
+        same value to all six sub-games. The pair alone would collide across matches, which
+        rule 3 forbids, hence the timestamp.
+  - [x] Two CLI tests added; the three existing `fake_run` stubs updated for the new parameter.
+- [x] 191/191 both repos, ruff clean. Verified `--game-id` appears in `league-peer --help` and
+      the full series command line parses.
+- [ ] **Part 2, still to do**: a series-level `final_game_result` builder that reads the six
+      sub-games' artifacts, scores them with `score_series`, verifies the opponent's sealed
+      records, and sends **one** email — only when all six completed. Until that exists a counted
+      run would still send six per-sub-game emails.
+
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication
       approach, decision-making, LLM usage, live-GUI verification, replay-viewer
