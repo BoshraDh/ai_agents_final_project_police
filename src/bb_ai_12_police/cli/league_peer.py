@@ -22,6 +22,7 @@ from bb_ai_12_police.domain.protocol import GameOutcome, Role
 from bb_ai_12_police.league.client import LeagueTransport
 from bb_ai_12_police.league.inbox import LeagueInbox
 from bb_ai_12_police.league.runtime import LeagueRuntime
+from bb_ai_12_police.league.server_ready import wait_until_serving
 from bb_ai_12_police.league.server_tools import add_league_tools
 from bb_ai_12_police.league.terms import terms_signature, to_wire_terms
 from bb_ai_12_police.llm.resolve_provider import resolve_provider
@@ -94,7 +95,9 @@ def run(
         target=run_server, args=(mcp, "127.0.0.1", net["my_port"]), daemon=True
     )
     thread.start()
-    time.sleep(1.0)
+    if not wait_until_serving(net["my_port"]):
+        print(f"[league] our MCP route never came up on port {net['my_port']}; aborting")
+        _exit(1)
 
     board = Board.from_config(shared)
     runtime = LeagueRuntime(

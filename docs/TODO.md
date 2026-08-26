@@ -894,6 +894,33 @@ especially ones that arrive with prescriptive fix instructions attached.
 - [ ] **Startup race remains for simultaneous local runs**: both peers must be launched within
       the connect window of each other. Not an issue against a real opponent now that the first
       connect waits 180s.
+- [x] **Sixth real bug, and the one that actually killed the live series**: `cli/league_peer.py`
+      started the MCP server thread and then slept a flat `time.sleep(1.0)` before beginning the
+      protocol. Uvicorn accepts connections a beat before FastMCP mounts the `/mcp` route, so we
+      began the exchange while our own route still answered **404**.
+  - [x] **Measured live 2026-08-26, sub-game 3**: `21:44:52 receive_turn step1 -> 404`,
+        `21:44:54 receive_turn step1 -> 200` (their retry), `21:44:55 step2 -> 200`, then 180
+        seconds of mutual silence and `21:47:55 submit_audit`. We sent 3 turns, they sent 2
+        steps, and each side then waited for the other until timeout. Sub-game 2 died
+        identically. Sub-game 1 survived only because the opponent had been retrying against us
+        for ~90s beforehand, so their first success landed after the route was live.
+  - [x] **Mechanism**: the lost turn is not recoverable by a retry. The opponent re-sends on a
+        fresh session, but by then the two step counters are offset by one and both peers block
+        forever. It is a deadlock, not a dropped message.
+  - [x] **Fix**: new `league/server_ready.py:wait_until_serving()` polls
+        `http://127.0.0.1:<my_port>/mcp` until it stops answering 404 (connection errors count
+        as "not up yet"), with a 30s ceiling; `league_peer.py` calls it instead of sleeping and
+        aborts loudly if the route never mounts. A longer sleep would still have been a guess —
+        this waits for the real condition. Put in its own module to avoid growing
+        `league_peer.py`, which is already over the 150-line cap.
+  - [x] **Verified**: local two-sided run after the fix — **zero 404s on either side**, both
+        peers reached `survived (final_turn=35)`. Before the fix every live sub-game showed them.
+- [ ] **Opponent-side bug, reported by SMNGRP05 2026-08-26, not ours to fix**: their peer
+      consumes its own outbound turns as inbound opponent turns (their `_seen_commits` duplicate
+      guard is populated only from inbound messages, so their own commit looks new). Their
+      police declares its own cell as `capture_claim` every turn, which is what they initially
+      mistook for our thief claiming captures. Worth remembering if a sub-game desyncs in a way
+      our own logs cannot explain.
 - [ ] **Open question for both teams** (narrowed, no longer blocking): they report 34 steps per
       sub-game; `config/game.json` says `max_moves: 35` / `survival_threshold: 35` and we run
       `--turns 35`. The closing-timeout fix makes the off-by-one harmless, but the two teams
