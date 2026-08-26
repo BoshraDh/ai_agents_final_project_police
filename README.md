@@ -40,6 +40,12 @@ matches against opponents that run the `copthief-league-protocol` kit's wire sha
 `submit_commit`/`submit_reveal`. Verified end-to-end with a real two-sided smoke test — see
 `docs/PRD_league_adapter.md`.
 
+✅ **New: paired wire tracing** — every league tool call is logged in both directions
+(`[wire] <utc-ms> OUT|OUT-OK|OUT-ERR|IN <tool> step=N sub_game=N commit=<12 chars>`), flushed
+per line. An outbound call is traced before it is sent *and* when it resolves, so the log
+distinguishes "they answered" from "it never completed" — the basis for settling a disputed
+exchange with an opponent by diffing the two lists. See `docs/PRD_league_adapter.md`.
+
 ✅ **New: automatic end-of-game report email** — `report/emit.py` now builds the four mandatory
 JSON artifacts, writes them, and emails them to the grader (`config/game.toml`'s
 `[email].recipient`) via the already-live-verified Gmail OAuth setup, automatically whenever

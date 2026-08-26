@@ -1017,6 +1017,55 @@ especially ones that arrive with prescriptive fix instructions attached.
       `logs/`** — the 2026-08-26 `survived` result left no file. Use `--report-to <own email>`
       if a friendly series should leave a record.
 
+## 2026-08-26 (later) — the wire log could not have settled the dispute it was built for
+- [x] **Context**: SMNGRP05 replied to the instrumentation plan with two claims about their own
+      side and one inference about ours. Their side, taken as reported (not verifiable from
+      here): a single bind line `21:29:03,091 MCP server for police listening on 0.0.0.0:8801`,
+      `ensure_port_free()` before binding, and four handlers of the shape
+      `def receive_turn(message): inboxes.turns.put(message); return {"ok": True}` with no
+      session id read, stored or compared anywhere. Their inference about us: sub-game 2 logged
+      only two `CallToolRequest` lines (our negotiate 21:34:33.764, one more 21:37:44.454), so
+      our `{'ok': True}` for turn 2 "came back without their handler having run".
+- [x] **Verified against our actual code before accepting any of it** (standing rule):
+  - [x] **No path in our client fabricates a reply.** `league/client.py:_call` returns
+        `result.structured_content or result.data` straight off `fastmcp.Client.call_tool`,
+        which raises on a tool error. There is no default, no cached previous reply, no
+        synthesised success. So the `{'ok': True}` we logged *was* parsed from a real MCP tool
+        result that arrived over the wire — their inference does not make our log a lie, it
+        makes the question "which process produced that result", which is exactly the open one.
+  - [x] Their `{"ok": True}` shape is **not distinctive**: our own `league/server_tools.py:35`
+        returns the identical literal from *our* `receive_turn`. Worth remembering before
+        treating that string as proof of whose handler ran.
+- [x] **The real defect their message exposed, and it is ours: the wire log was write-only on
+      the send side.** `_call` traced `OUT` *before* calling, and never traced the result. A
+      call that never completed therefore looked **identical in the log to one the opponent
+      answered** — the precise ambiguity the log was built to remove. Under the agreed diff
+      rule ("in our OUT, absent from their IN -> lost on the wire") a failed call would have
+      been misread as a lost message, and we would have replayed six sub-games and still had
+      two irreconcilable lists.
+  - [x] **Fix**: every outbound call now emits a pair — `OUT` before the send, then `OUT-OK`
+        carrying the parsed reply, or `OUT-ERR` carrying the exception, with the same
+        tool/step/commit identity on all three so they correlate without a second log.
+        `trace()` takes an optional `detail` fragment; direction column widened to 7.
+  - [x] **Revised diff rule** (in `wire_log.py`'s docstring, shared with SMNGRP05):
+        our `OUT-OK` absent from their IN -> the wire, or another process behind their tunnel;
+        our `OUT` with no `OUT-OK` -> never completed for us, ours; in both but unacted ->
+        theirs; never in our OUT -> ours.
+- [x] **First tests for the wire log** (`tests/league/test_wire_log.py`, both repos): line shape
+      (step/sub_game/12-char commit prefix), `detail` appended verbatim, `OUT`+`OUT-OK` with the
+      reply on success, and `OUT-ERR` + propagation when both attempts fail. The log had **zero**
+      test coverage before this, while being the agreed arbiter between two teams.
+- [x] 178 tests, ruff-clean, both repos.
+- [ ] **Pre-existing environmental failure, now visible in BOTH repos**:
+      `tests/gui/test_replay_viewer.py` fails with `TclError: This probably means that tk wasn't
+      installed properly` against the uv-managed CPython 3.13. It imports only `crypto` and
+      `gui`, nothing from `league`, so it is unrelated to this change. Previously recorded as
+      police-only; it is the environment, not the repo.
+- [ ] **Still unknown**: what answered our turn 2 in sub-game 2. Narrowed to two candidates
+      that the next run's paired lines will separate — a reply from a process behind their
+      tunnel that is not the one keeping their game state, or a reply to a call that our own
+      reconnect had already moved to a new session. Not theorising further; the diff decides.
+
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication
       approach, decision-making, LLM usage, live-GUI verification, replay-viewer

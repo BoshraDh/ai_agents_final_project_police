@@ -93,9 +93,19 @@ class LeagueTransport:
         except Exception as exc:  # noqa: BLE001 - reconnect and retry once
             note(f"{tool} raised {exc!r}; reconnecting (NEW session) and retrying once")
             await self._reconnect()
-            result = await self._client.call_tool(tool, {arg_name: payload})
+            try:
+                result = await self._client.call_tool(tool, {arg_name: payload})
+            except Exception as retry_exc:  # noqa: BLE001 - traced, then propagated
+                trace("OUT-ERR", tool, payload, detail=f"error={retry_exc!r}")
+                raise
             note(f"{tool} succeeded on the retry, on a different session")
-        return result.structured_content or result.data
+        reply = result.structured_content or result.data
+        # The reply is traced in the SAME stream as the send, with the same
+        # tool/step/commit identity, so a diff against the opponent's inbound
+        # list can tell "we sent and they answered" apart from "we sent and it
+        # never landed" without cross-referencing a second log.
+        trace("OUT-OK", tool, payload, detail=f"reply={reply!r}")
+        return reply
 
     async def negotiate(self, message: dict[str, Any]) -> dict[str, Any]:
         return await self._call("negotiate", "message", message)

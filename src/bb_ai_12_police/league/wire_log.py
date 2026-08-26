@@ -6,9 +6,18 @@ we made 4 and got `{'ok': True}` back from their `receive_turn` for two of them.
 A reply of that shape can only come from their tool actually running, so one of
 the two logs is measuring something the other is not.
 
+Every outbound call emits a PAIR of lines: `OUT` before it is sent, and then
+either `OUT-OK` (carrying the reply we parsed) or `OUT-ERR` (carrying the
+exception) once it resolves. The single `OUT` line alone was not enough -- it is
+printed before the call, so a call that never completed looked identical on our
+side to one that succeeded, which is precisely the ambiguity the log exists to
+remove.
+
 The rule for reading a diff of the two lists:
-  - in our OUT, absent from their IN  -> lost on the wire (or landed on another
-    process behind their tunnel)
+  - our OUT-OK, absent from their IN  -> the call completed for us but never ran
+    on their side: lost on the wire, or answered by another process behind their
+    tunnel
+  - our OUT with no OUT-OK            -> the call never completed for us; ours
   - in both, but they never acted     -> their side
   - never in our OUT                  -> our side
 
@@ -26,10 +35,17 @@ from typing import Any
 _COMMIT_PREFIX_LEN = 12
 
 
-def trace(direction: str, tool: str, body: dict[str, Any] | None) -> None:
-    """`direction` is "OUT" (we called them) or "IN" (they called us)."""
+def trace(
+    direction: str, tool: str, body: dict[str, Any] | None, detail: str | None = None
+) -> None:
+    """Trace one tool call.
+
+    `direction` is "IN" (they called us), "OUT" (we are about to call them),
+    "OUT-OK" (that call returned) or "OUT-ERR" (it failed). `detail` is an
+    already-formatted `key=value` fragment appended verbatim.
+    """
     stamp = dt.datetime.now(dt.UTC).isoformat(timespec="milliseconds")
-    parts = [f"[wire] {stamp} {direction:3} {tool}"]
+    parts = [f"[wire] {stamp} {direction:7} {tool}"]
     body = body or {}
     step = body.get("step")
     if step is not None:
@@ -40,6 +56,8 @@ def trace(direction: str, tool: str, body: dict[str, Any] | None) -> None:
     commit = body.get("commit")
     if isinstance(commit, str):
         parts.append(f"commit={commit[:_COMMIT_PREFIX_LEN]}")
+    if detail is not None:
+        parts.append(detail)
     print(" ".join(parts), flush=True)
 
 

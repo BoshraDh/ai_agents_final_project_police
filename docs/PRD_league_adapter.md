@@ -57,6 +57,18 @@ Survival is self-declared by the thief via `win_claim` once its own step count r
   the audit to us — and that `result_claim` was a dict where the kit expects a string. Both
   fixed; regression-tested for the exact three-key shape.
 
+- **Wire-level tracing made decisive 2026-08-26.** `league/wire_log.py` traces every tool call
+  in both directions so two peers can settle a disputed exchange by diffing their lists instead
+  of trading theories. Its first version traced only `OUT`, and traced it *before* the call —
+  so a call that never completed was indistinguishable from one the opponent answered, which is
+  the exact ambiguity it existed to remove. Each outbound call now emits `OUT` and then either
+  `OUT-OK` (with the parsed reply) or `OUT-ERR` (with the exception), all carrying the same
+  tool/step/commit identity. Reading the diff: our `OUT-OK` absent from their inbound list means
+  the wire or another process behind their tunnel; our `OUT` with no `OUT-OK` means it never
+  completed for us and is ours; present in both but unacted is theirs.
+- **`{"ok": True}` is not a distinctive reply** — `league/server_tools.py` returns the identical
+  literal from our own `receive_turn`, so it never identifies whose handler ran.
+
 ## Explicitly out of scope / simplified
 - **Barrier placement and barrier-based capture** (`barrier_placed` field) — this repo's
   `PoliceBrain` doesn't decide barrier placement at all yet (a pre-existing gap, not new here).

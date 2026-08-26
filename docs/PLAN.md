@@ -285,6 +285,14 @@ commit-reveal formula deviation) and re-confirm three already-implemented parame
 (book re-verification pass #2)" for the exact quotes and page numbers, and
 `docs/PRD_security_crypto.md` for the corrected Step-0 design-decision note.
 
+## Diagnosing across two peers — 2026-08-26
+When two teams' logs disagree, the arbiter is `league/wire_log.py`, not analysis: both peers
+trace every tool call in both directions and the lists are diffed by `commit`. The send side
+now traces the *result* as well as the send (`OUT` -> `OUT-OK`/`OUT-ERR`), because tracing only
+the send made a call that never completed look identical to one the opponent answered. See
+`docs/PRD_league_adapter.md` for the diff rule and `docs/TODO.md` for the live case that
+produced it.
+
 ## Open items / flags (tracked, not silently decided)
 - `agreed_between` in `config/game.json` currently lists `"<opponent-team-code>"` as a
   placeholder — fill in the real opponent code once a match is negotiated, in both repos.
