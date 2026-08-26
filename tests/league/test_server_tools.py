@@ -25,7 +25,7 @@ def test_negotiate_stores_the_message_and_replies_with_the_given_reply():
     tools = _tools(mcp)
     reply = tools["negotiate"]({"terms": {"a": 1}})
     assert reply == {"status": "accepted", "nonce": "abc"}
-    assert inbox.negotiation == {"terms": {"a": 1}}
+    assert inbox.wait_for_negotiate(1, 0.05) == {"terms": {"a": 1}}
 
 
 def test_receive_turn_stores_the_message_by_step():

@@ -921,6 +921,62 @@ especially ones that arrive with prescriptive fix instructions attached.
       police declares its own cell as `capture_claim` every turn, which is what they initially
       mistook for our thief claiming captures. Worth remembering if a sub-game desyncs in a way
       our own logs cannot explain.
+- [x] **Seventh real bug: nothing in the inbound path was scoped to a sub-game.**
+      `LeagueInbox` kept a single `negotiation` slot, and `negotiate()` validated only
+      `theirs["terms"] == terms` plus the signature. **The terms are byte-identical across all
+      six sub-games** — they come from `config/game.json`, which does not change between them —
+      so a leftover greeting for sub-game 3 passed full validation while we were opening
+      sub-game 4. SMNGRP05 already guard this; their log line is literally
+      `Dropping a greeting for sub-game 3 while opening sub-game 4.`
+  - [x] **Wire shapes verified from their actual request bodies** (captured off our own ngrok
+        inspector, not assumed): `negotiate` carries `sub_game_number` (top-level keys
+        `game_uid, group_id, identity, info_mode_sha256, nonce, role, scent_model_sha256,
+        signature, sub_game_number, terms`), but `receive_turn` does **not** — its fields are
+        `step, sender, hint, smell_grid, commit, timestamp, barrier_placed, capture_claim,
+        claim_response, win_claim`. So turns cannot be filtered by sub-game at all; they can
+        only be excluded by *when* they arrive.
+  - [x] **Fix**: `LeagueInbox._negotiations` is now keyed by sub-game exactly as `_turns` is
+        keyed by step, reusing the existing `_wait` helper.
+        `wait_for_negotiate(sub_game_number, timeout)` waits for the matching entry, so a stale
+        greeting no longer satisfies it — we keep waiting for the right one. A peer that omits
+        the field is filed under the sub-game this process is playing (taken from
+        `negotiate_reply` in `server_tools.py`), so an opponent that doesn't send it still works.
+  - [x] **Fix**: `LeagueInbox.reset_turns()`, called from `negotiate()` once the matching
+        handshake is accepted — anything buffered before then is a leftover from the opponent's
+        previous sub-game, and arrival time is the only signal we have.
+  - [x] **Fix**: `receive_turn` used `message["step"]`, so a turn without that key raised
+        inside the MCP tool and returned an error to the opponent mid-game. Now dropped quietly.
+  - [x] Terms/signature mismatch deliberately left **warn-only** (`_play` prints
+        `DO NOT MATCH` and plays on). Making it fatal would abort games that currently succeed;
+        that hardening belongs before a counted series, not before a friendly.
+- [x] **Series runner rewritten** (`C:\Users\dream\play_series_smngrp05.sh`): now takes the
+      opponent URL as a required argument (their tunnel rotates, so a hardcoded one is a
+      liability) and an optional sub-game list, and calls the venv executables directly with
+      `--repo-root` instead of `uv run` — `uv run` failed once with `exit=127`, which silently
+      skipped a whole sub-game and left the opponent waiting ~4 minutes against an empty log.
+- [x] **Local six-sub-game rehearsal passed (2026-08-26)** — our police repo vs our thief repo,
+      sub-games 1..6 back to back. **All six reached `survived (final_turn=35)` on BOTH sides**,
+      the first time a full six-sub-game sequence has ever completed. This is the test that had
+      never been run, and it is what validates the sub-game scoping above.
+  - [x] **It caught a regression I introduced while fixing this**: the first attempt also called
+        `inbox.reset_turns()` after the handshake, on the reasoning that anything buffered
+        beforehand must be stale. It is not — when both peers start close together the
+        opponent's legitimate turn 1 arrives *before* our handshake completes, so clearing it
+        deadlocked every sub-game instantly (rehearsal run 1: all `ongoing`, 0 turns absorbed).
+        Removed; the negotiate scoping alone is the correct guard. Noted here because the idea
+        looks obviously right on paper and will be tempting to re-add.
+  - [x] One stray `404` still appeared on an inbound *negotiate* in sub-game 2 and was absorbed
+        by the handshake retry. `wait_until_serving` guarantees our route is live before **we**
+        send anything, so inbound *turns* cannot 404; it cannot stop the opponent's very first
+        greeting from arriving a moment early. Harmless — a greeting is retried, a lost turn is
+        what deadlocks.
+- [ ] **Residual, not blocking**: sub-game 4's two peer processes finished the game, released
+      port 8802/8803 and printed their outcome, but never reached `_exit()` — they were still
+      alive ~10 minutes later (confirmed via `Get-CimInstance Win32_Process`, all four traced to
+      the sub-game-4 command line). Suspected hang closing the fastmcp client after the opponent
+      has already gone. They are NOT listening, so they cannot answer an opponent with stale
+      state — the actual historical harm — and `free_port()` in the series runner kills any
+      `league-peer` by command line before every attempt. Worth chasing before submission.
 - [ ] **Open question for both teams** (narrowed, no longer blocking): they report 34 steps per
       sub-game; `config/game.json` says `max_moves: 35` / `survival_threshold: 35` and we run
       `--turns 35`. The closing-timeout fix makes the off-by-one harmless, but the two teams

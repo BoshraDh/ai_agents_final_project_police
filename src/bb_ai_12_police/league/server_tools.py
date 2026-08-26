@@ -17,9 +17,13 @@ from bb_ai_12_police.league.inbox import LeagueInbox
 def add_league_tools(
     mcp: FastMCP, inbox: LeagueInbox, negotiate_reply: dict[str, Any]
 ) -> None:
+    # An opponent that omits `sub_game_number` is filed under the sub-game this
+    # process is actually playing, which `negotiate_reply` already carries.
+    own_sub_game = negotiate_reply.get("sub_game_number", 1)
+
     @mcp.tool
     def negotiate(message: dict[str, Any]) -> dict[str, Any]:
-        inbox.receive_negotiate(message)
+        inbox.receive_negotiate(message, own_sub_game)
         return negotiate_reply
 
     @mcp.tool

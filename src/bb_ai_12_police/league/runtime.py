@@ -99,12 +99,22 @@ class LeagueRuntime:
         for attempt in range(1, _NEGOTIATE_ATTEMPTS + 1):
             await self.transport.negotiate(message)
             try:
-                theirs = self.inbox.wait_for_negotiate(self.handshake_timeout_sec)
+                theirs = self.inbox.wait_for_negotiate(
+                    sub_game_number, self.handshake_timeout_sec
+                )
             except TimeoutError:
                 if attempt == _NEGOTIATE_ATTEMPTS:
                     raise
                 await asyncio.sleep(_NEGOTIATE_RETRY_DELAY_SEC)
                 continue
+            # NOTE: do NOT clear buffered turns here. That was tried and it
+            # broke every sub-game (local rehearsal 2026-08-26: both peers
+            # `ongoing`, 0 turns absorbed). When both peers start close
+            # together the opponent's legitimate turn 1 arrives *before* our
+            # handshake completes, so clearing deletes it and the sub-game
+            # deadlocks immediately. Sub-game scoping on the greeting above is
+            # the real guard; each sub-game also runs in a fresh process with
+            # an empty inbox, so there is nothing stale to clear in practice.
             return theirs["terms"] == terms and verify_signature(
                 theirs["terms"], theirs["nonce"], theirs["signature"]
             )
