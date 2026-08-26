@@ -1395,6 +1395,31 @@ not from a paraphrase.
       are credited as a pair, so a lone report against a missing one credits nobody.
 - [x] 208/208 both repos, ruff clean.
 
+## 2026-08-27 — two defects found while preparing the counted filing, both before it mattered
+- [x] **Attachment glob would have mixed two matches into one filing.** `series_attachments`
+      globbed `*{game_id}*.json`, and the agreed plain id `SMNGRP05-vs-bb-ai-12` is a PREFIX of a
+      rehearsal's `SMNGRP05-vs-bb-ai-12-20260826-2217`. The counted filing would have carried 28
+      files from two different matches — exactly the mixing Table 20's naming rule exists to
+      prevent. Now four exact patterns (`declaration_<id>.json`, `config_<id>_g*.json`,
+      `log_<id>_g*.json`, `result_<id>.json`) with a regression test asserting a longer id is
+      never swept in. `collect_sub_game_logs` was already safe — `log_<id>_g*` cannot match a
+      timestamped id.
+- [x] **`games_played_including_this` did not exist in our report.** SMNGRP05 declare theirs (8)
+      and asked for ours; the field was absent from the code-generated JSON entirely. Added as an
+      explicit `--games-played` on `series-report`, threaded into `final_result`, and left `null`
+      when not supplied rather than defaulting to a guess. Each side counts its own series, so
+      the two filings are expected to differ here.
+- [ ] **OPEN, and it is a declaration, not a calculation: what is our own count?**
+      `logs/bb-ai-12/DRAFT_result_aviayeli-vs-bb-ai-12.json` is a complete six-sub-game
+      `final_game_result` from 2026-08-25 — but it is prefixed `DRAFT_`, `docs/TODO.md` records
+      no filing to the lecturer ever, and `min_games_to_pass = 2` is still listed as outstanding.
+      So either that series was played and never filed (our count for the SMNGRP05 counted game
+      is **1**) or it was filed and the TODO simply never recorded it (**2**). SMNGRP05 asserted
+      "your own figure will be 2" — an inference, and exactly the kind they warned against after
+      a wrong declaration of theirs required a written correction to Dr Segal. Must be answered
+      by the user from what was actually sent, not deduced from the repo.
+- [x] 209/209 police, 208 + the known Tk flake on thief; ruff clean both.
+
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication
       approach, decision-making, LLM usage, live-GUI verification, replay-viewer

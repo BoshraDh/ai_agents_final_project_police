@@ -183,3 +183,25 @@ def test_an_audit_that_never_arrived_reports_unknown_not_verified(tmp_path):
 
     assert report["opponent_audit"]["all_verified"] is None
     assert report["opponent_audit"]["records_received"] == 0
+
+
+def test_attachments_never_pick_up_a_longer_game_id(tmp_path):
+    # A plain match id is a PREFIX of a rehearsal's timestamped one, so a loose
+    # glob would attach a different match's files to this filing. Caught before
+    # the first counted filing, not after it.
+    plain = "SMNGRP05-vs-bb-ai-12"
+    target = tmp_path / US
+    target.mkdir(parents=True)
+    (target / f"declaration_{plain}.json").write_text("{}", encoding="utf-8")
+    (target / f"result_{plain}.json").write_text("{}", encoding="utf-8")
+    for n in range(1, 7):
+        (target / f"config_{plain}_g{n:02d}.json").write_text("{}", encoding="utf-8")
+        (target / f"log_{plain}_g{n:02d}.json").write_text("{}", encoding="utf-8")
+    # a rehearsal of the same pairing, which must not be swept in
+    (target / f"log_{plain}-20260826-2217_g01.json").write_text("{}", encoding="utf-8")
+    (target / f"result_{plain}-20260826-2217.json").write_text("{}", encoding="utf-8")
+
+    names = [p.name for p in series_attachments(tmp_path, US, plain)]
+
+    assert len(names) == 14
+    assert not any("2217" in n for n in names)

@@ -41,8 +41,22 @@ def collect_sub_game_logs(logs_dir: Path, group_id: str, game_id: str) -> list[d
 
 def series_attachments(logs_dir: Path, group_id: str, game_id: str) -> list[Path]:
     """Declaration, per-sub-game configs and logs, and the match result."""
+    # Exact patterns, not `*{game_id}*`: a plain match id like
+    # "SMNGRP05-vs-bb-ai-12" is a PREFIX of a rehearsal's
+    # "SMNGRP05-vs-bb-ai-12-20260826-2217", so a loose glob would attach a
+    # different match's artifacts to this filing -- precisely the mixing the
+    # book's Table 20 naming rule exists to prevent.
     target = logs_dir / group_id
-    return sorted(p for p in target.glob(f"*{game_id}*.json"))
+    patterns = (
+        f"declaration_{game_id}.json",
+        f"config_{game_id}_g*.json",
+        f"log_{game_id}_g*.json",
+        f"result_{game_id}.json",
+    )
+    found: set[Path] = set()
+    for pattern in patterns:
+        found.update(target.glob(pattern))
+    return sorted(found)
 
 
 def build_final_result(
@@ -51,6 +65,7 @@ def build_final_result(
     opponent_group: str,
     sub_game_logs: list[dict[str, Any]],
     expected_sub_games: int,
+    games_played_including_this: int | None = None,
 ) -> dict[str, Any]:
     """The match-level `final_game_result`, scored from the per-sub-game logs.
 
@@ -107,6 +122,11 @@ def build_final_result(
             "total_score": series.total_score,
             "winner_group": series.winner_group,
             "series_tie": series.series_tie,
+            # Each side counts its OWN series, so the two filings are expected to
+            # differ here. Declared explicitly by the caller and never inferred:
+            # a wrong declaration is a rules matter, and it is trivially avoided
+            # by stating it rather than deducing it from logs.
+            "games_played_including_this": games_played_including_this,
         },
         "opponent_audit": _aggregate_opponent_audit(sub_game_logs),
     }

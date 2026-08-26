@@ -83,6 +83,14 @@ def main(argv: list[str] | None = None) -> int:
     series_p.add_argument(
         "--dry-run", action="store_true", help="build and write the result, send nothing"
     )
+    series_p.add_argument(
+        "--games-played",
+        type=int,
+        default=None,
+        help="this team's own count of counted series INCLUDING this one. Each side counts "
+        "its own, so the two filings differ here by design. Left null if not given rather "
+        "than guessed",
+    )
 
     args = parser.parse_args(argv)
 
@@ -103,6 +111,7 @@ def main(argv: list[str] | None = None) -> int:
             args.opponent_group,
             args.report_to,
             args.dry_run,
+            args.games_played,
         )
     if args.command == "league-peer":
         return league_peer.run(

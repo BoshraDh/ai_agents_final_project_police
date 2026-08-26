@@ -50,6 +50,7 @@ def run(
     opponent_group: str,
     report_to: str | None = None,
     dry_run: bool = False,
+    games_played: int | None = None,
 ) -> int:
     cfg = ConfigManager(repo_root)
     shared = cfg.load_shared()
@@ -60,7 +61,9 @@ def run(
 
     logs = collect_sub_game_logs(logs_dir, group_id, game_id)
     try:
-        report = build_final_result(game_id, group_id, opponent_group, logs, expected)
+        report = build_final_result(
+            game_id, group_id, opponent_group, logs, expected, games_played
+        )
     except IncompleteSeriesError as exc:
         print(f"[series-report] NOT filing: {exc}")
         print("[series-report] artifacts remain on disk; replay the series rather than file it.")
