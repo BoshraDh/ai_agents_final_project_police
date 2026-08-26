@@ -1216,6 +1216,31 @@ not from a paraphrase.
       is explicitly "אפס טוקנים", with the competition judged on algorithmic movement quality.
       Our `TemplateProvider` is the sanctioned choice, not a shortcut.
 
+## 2026-08-27 — scoring: the tie rule is a SERIES award, and we do not implement scoring at all
+- [x] **SMNGRP05 filed 47-47 where we filed 45-45, and they are right.** Settled from the book,
+      not by agreement between the teams:
+  - [x] **Table 2, p.22** (the sub-game scoring table) lists exactly three end events — successful
+        capture, prolonged survival, technical loss — and has **no tie row**. A single sub-game
+        cannot tie, so `tie_score` has nothing to attach to at sub-game level; reading it that way
+        makes the field dead code that never fires.
+  - [x] **Tie Rule, p.71**: "אם הניקוד המצטבר של **כל המשחקונים** בין זוג קבוצות מסתיים בתיקו —
+        כלומר סכום הנקודות של שתי הקבוצות זהה — כל קבוצה מקבלת [ציון תיקו]". It is a
+        series-level decider, awarded to both sides when the aggregate is level.
+  - [x] `config/game.json` has `scoring.tie_score = 2`, so 45 + 2 = **47 each**. Our series report
+        corrected to 47-47 (v3); the earlier files summed the six sub-games and stopped.
+- [x] **Root of our error: this repo has no scoring implementation whatsoever.** `grep -rn
+      "tie_score\|capture_cop"` over `src/` returns nothing — the only hit anywhere is a test
+      asserting `capture_cop == 20`. `report/artifacts.py:build_result` records an outcome and a
+      role per sub-game; it never converts outcomes into points, and nothing aggregates a series.
+      The totals in the friendly report were computed by hand outside the repo.
+- [ ] **Therefore the series report builder must implement the scoring table, not just add a
+      tie award**: per-sub-game points from Table 2 (`capture_cop=20`/`capture_thief=5`,
+      `survival_cop=5`/`survival_thief=10`, technical loss 0/0), aggregation across the six, then
+      the p.71 tie rule applied once at the end. With tests against the book's own values.
+- [ ] **Why this matters more than a friendly's cosmetics**: two filings that disagree on a scored
+      field can be read as a contradicting pair, and a counted tie between us is not hypothetical
+      — tonight came out exactly level, and both police strategies still convert nothing.
+
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication
       approach, decision-making, LLM usage, live-GUI verification, replay-viewer
