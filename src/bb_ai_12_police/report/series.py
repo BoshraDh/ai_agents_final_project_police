@@ -94,6 +94,12 @@ def build_final_result(
         "groups": sorted([group_id, opponent_group]),
         "num_sub_games": expected_sub_games,
         "reported_by": group_id,
+        # The opponent's own match id, echoed back so the two filings can be
+        # paired on something other than a filename convention.
+        "game_uid": next(
+            (log.get("opponent_game_uid") for log in sub_game_logs if log.get("opponent_game_uid")),
+            None,
+        ),
         "sub_games": entries,
         "final_result": {
             "sub_game_totals": series.sub_game_totals,

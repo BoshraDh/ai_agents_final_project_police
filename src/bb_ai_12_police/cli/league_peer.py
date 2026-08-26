@@ -157,6 +157,7 @@ def run(
         game_id=game_id,
         send=not defer_report,
         opponent_audit_payload=runtime.inbox.audit,
+        opponent_game_uid=runtime.opponent_game_uid,
     )
     _exit(0)
 

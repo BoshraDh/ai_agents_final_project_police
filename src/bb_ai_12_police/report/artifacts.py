@@ -30,6 +30,7 @@ def build_log(
     outcome: GameOutcome | None = None,
     own_role: Role | None = None,
     opponent_audit: dict[str, Any] | None = None,
+    opponent_game_uid: str | None = None,
 ) -> dict[str, Any]:
     """The per-sub-game record. Carries the sub-game's outcome as well as its
     moves, because `result_<game_id>.json` is a MATCH-level file (book Table 20)
@@ -47,6 +48,7 @@ def build_log(
         ],
         "audit_passed": commit_log.audit(),
         "opponent_audit": opponent_audit,
+        "opponent_game_uid": opponent_game_uid,
     }
 
 

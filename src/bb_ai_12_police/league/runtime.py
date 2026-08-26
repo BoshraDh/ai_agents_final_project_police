@@ -88,6 +88,11 @@ class LeagueRuntime:
         self.outcome = GameOutcome.ONGOING
         self.final_turn: int | None = None
         self._pending_claim: list[int] | None = None
+        # The opponent's own match identifier, taken from their greeting. It is
+        # the only cross-team key either side carries, and our filed reports had
+        # none at all: two filings that cannot be paired are read as two
+        # one-sided ones, and neither is credited (book, printed p.78).
+        self.opponent_game_uid: str | None = None
 
     async def negotiate(self, sub_game_number: int = 1) -> bool:
         terms = to_wire_terms(self.shared_config)
@@ -125,6 +130,7 @@ class LeagueRuntime:
                     f"{sub_game_number}, but their turn did -- playing on, terms unverified"
                 )
                 return False
+            self.opponent_game_uid = theirs.get("game_uid")
             return theirs["terms"] == terms and verify_signature(
                 theirs["terms"], theirs["nonce"], theirs["signature"]
             )

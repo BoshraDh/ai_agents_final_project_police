@@ -45,6 +45,7 @@ def emit_report(
     game_id: str | None = None,
     send: bool = True,
     opponent_audit_payload: dict[str, Any] | None = None,
+    opponent_game_uid: str | None = None,
 ) -> dict[str, Any] | None:
     """Builds and writes the four artifacts, then emails them to `recipient`.
 
@@ -61,7 +62,9 @@ def emit_report(
     declaration = build_declaration(step0)
     config = build_config(shared_config, game_json_sha256)
     opponent_audit = verify_opponent_records(opponent_audit_payload)
-    log = build_log(game_id, sub_game_number, commit_log, outcome, role, opponent_audit)
+    log = build_log(
+        game_id, sub_game_number, commit_log, outcome, role, opponent_audit, opponent_game_uid
+    )
     result = build_result(game_id, sub_game_number, outcome, role)
 
     attachments = write_artifacts(

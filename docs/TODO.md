@@ -1369,6 +1369,32 @@ not from a paraphrase.
       deferred until AFTER the counted match — it is a pure refactor of the game loop that took a
       full night to stabilise, and it buys nothing for the match itself.
 
+## 2026-08-27 — game_id agreed with SMNGRP05, and we now carry a cross-team key at all
+- [x] **Both teams file the plain `SMNGRP05-vs-bb-ai-12`.** Agreed after checking rather than on
+      request: it is the form the book's own Table 20 example uses (`SMNGRP05-vs-imreeyal`), and
+      the one SMNGRP05's seven accepted counted filings carry. Two filings that fail to pair read
+      as two one-sided ones and neither side is credited (printed p.78).
+  - [x] `play_series_smngrp05.sh` now uses the plain id for a REAL filing (`COUNTED=1`, no
+        `REPORT_TO`) and a timestamped one for a rehearsal, so a practice run can never overwrite
+        the artifacts of a match that was actually filed. `$GAME_ID` still overrides both.
+  - [ ] **Known tension, deliberately accepted**: mandatory rule 3 (printed p.140) wants a
+        distinct config filename per game, and the plain form would collide if we ever play a
+        SECOND counted series against SMNGRP05. The book's own example uses the plain form, so
+        the tension is the book's; revisit only if a repeat pairing is scheduled.
+- [x] **We were filing no cross-team identifier at all.** SMNGRP05 said our `game_uid` had
+      matched theirs "in every report you've sent" — that was true only of the JSON built by hand
+      earlier; `grep -rn game_uid src/` returned nothing and the code-generated report's
+      top-level keys had no such field. So if the lecturer's pairing keyed on `game_uid`, our
+      automated filing had nothing to pair on.
+  - [x] **Fix**: `LeagueRuntime` captures `game_uid` from the opponent's greeting, `emit_report`
+        stores it in that sub-game's log, and the series report surfaces the first non-null as a
+        top-level `game_uid`. The opponent's own match id, echoed back, so the two filings can be
+        paired on something other than a filename convention.
+- [x] **Mutual no-partial-filing rule agreed**: if either reporter refuses to file, neither side
+      files and the series is replayed. Their reasoning matches ours — under p.78 the two filings
+      are credited as a pair, so a lone report against a missing one credits nobody.
+- [x] 208/208 both repos, ruff clean.
+
 ## Later stages (tracked here for visibility, detailed in their own PRD_*.md once started)
 - [ ] Write the full 6-section academic report in README.md (rules model, communication
       approach, decision-making, LLM usage, live-GUI verification, replay-viewer
