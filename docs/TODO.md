@@ -1228,11 +1228,19 @@ not from a paraphrase.
         series-level decider, awarded to both sides when the aggregate is level.
   - [x] `config/game.json` has `scoring.tie_score = 2`, so 45 + 2 = **47 each**. Our series report
         corrected to 47-47 (v3); the earlier files summed the six sub-games and stopped.
-- [x] **Root of our error: this repo has no scoring implementation whatsoever.** `grep -rn
-      "tie_score\|capture_cop"` over `src/` returns nothing — the only hit anywhere is a test
-      asserting `capture_cop == 20`. `report/artifacts.py:build_result` records an outcome and a
-      role per sub-game; it never converts outcomes into points, and nothing aggregates a series.
-      The totals in the friendly report were computed by hand outside the repo.
+- [x] ~~**Root of our error: this repo has no scoring implementation whatsoever.**~~
+      **RETRACTED, 2026-08-27 — this claim was wrong.** `domain/scoring.py` already existed with
+      `score_for`/`scores_for_both`, the correct Table 2 values, and `TIE_SCORE = 2` documented in
+      its own header table as **"tie (series-level)"** — the very interpretation the report got
+      wrong. The grep that produced the claim searched `tie_score`/`capture_cop` in lower case
+      while the constants are `TIE_SCORE`/`CAPTURE_COP`; a case-sensitive miss was turned into a
+      conclusion and committed. (Worse: acting on it, the existing module and its tests were
+      briefly overwritten before being restored from git — both trees verified clean afterwards.)
+- [x] **The real gap was narrower: no SERIES-level aggregation.** Per-sub-game scoring was
+      correct and tested; nothing summed six sub-games or applied the tie award, and
+      `report/artifacts.py:build_result` records an outcome and a role without converting either
+      into points. The friendly report's totals were arithmetic done by hand outside the repo,
+      which is why the omission was invisible.
 - [ ] **Therefore the series report builder must implement the scoring table, not just add a
       tie award**: per-sub-game points from Table 2 (`capture_cop=20`/`capture_thief=5`,
       `survival_cop=5`/`survival_thief=10`, technical loss 0/0), aggregation across the six, then
